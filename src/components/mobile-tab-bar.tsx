@@ -10,7 +10,6 @@ import {
   File01Icon,
   McpServerIcon,
   PuzzleIcon,
-  Rocket01Icon,
   Settings01Icon,
   UserGroupIcon,
 } from '@hugeicons/core-free-icons'
@@ -59,13 +58,6 @@ export const MOBILE_NAV_TABS: Array<TabItem> = [
     icon: Chat01Icon,
     to: '/chat/main',
     match: (p) => p.startsWith('/chat') || p === '/new',
-  },
-  {
-    id: 'playground',
-    label: 'Play',
-    icon: Rocket01Icon,
-    to: '/playground',
-    match: (p) => p.startsWith('/playground'),
   },
   {
     id: 'files',
