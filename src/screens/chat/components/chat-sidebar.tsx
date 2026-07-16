@@ -949,15 +949,15 @@ function ChatSidebarComponent({
                 )}
               >
                 <img
-                  src="/claude-avatar.webp"
-                  alt="Hermes Agent"
+                  src="/aia-session-logo.webp"
+                  alt="AIA Copilot"
                   className="size-6 rounded-lg"
                 />
                 <span
                   className="text-sm font-semibold tracking-tight"
                   style={{ color: 'var(--theme-text)' }}
                 >
-                  Hermes Workspace
+                  Mission Control
                 </span>
               </Link>
             </motion.div>

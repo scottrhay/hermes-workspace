@@ -9,6 +9,18 @@ const NAVIGATION_FILES = [
 ] as const
 
 describe('AIA navigation', () => {
+  it('brands the desktop sidebar as Mission Control', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src/screens/chat/components/chat-sidebar.tsx'),
+      'utf8',
+    )
+
+    expect(source).toContain('src="/aia-session-logo.webp"')
+    expect(source).toContain('alt="AIA Copilot"')
+    expect(source).toContain('Mission Control')
+    expect(source).not.toContain('Hermes Workspace\n                </span>')
+  })
+
   for (const relPath of NAVIGATION_FILES) {
     it(`${relPath} does not expose HermesWorld`, () => {
       const source = readFileSync(resolve(process.cwd(), relPath), 'utf8')
