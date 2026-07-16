@@ -70,8 +70,8 @@ export function ChatEmptyState({
         {/* Avatar in editorial frame, no glow — architectural restraint */}
         <div className="relative mb-6">
           <img
-            src="/claude-avatar.webp"
-            alt="Hermes Agent"
+            src="/aia-session-logo.webp"
+            alt="AIA Copilot"
             className="relative size-20 rounded-md"
             style={{
               border: '1px solid var(--theme-border)',
