@@ -175,12 +175,11 @@ export async function upsertRunToolCall(
     else nextToolCalls.push(toolCall)
     return {
       ...run,
-      status: toolCall.phase === 'error' ? 'error' : 'active',
+      // Tool failures can be recoverable. Only a run-level terminal event may
+      // mark the whole run complete or failed.
+      status: ['complete', 'error'].includes(run.status) ? run.status : 'active',
       lastEventAt: Date.now(),
       toolCalls: nextToolCalls,
-      ...(toolCall.phase === 'error' && toolCall.result
-        ? { errorMessage: toolCall.result }
-        : {}),
     }
   })
 }

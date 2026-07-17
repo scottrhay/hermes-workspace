@@ -33,6 +33,30 @@ export function shouldResolveStreamSession({
   return false
 }
 
+const PUBLIC_STREAM_REQUEST_ERRORS = new Set([
+  'message required',
+  'session not found',
+  'Session routing metadata is temporarily unavailable. Retry shortly.',
+  'Telegram workstream routing metadata is required. Reopen the workstream from the selector and retry.',
+  'Telegram workstreams are temporarily unavailable. Retry shortly.',
+  'Telegram workstream not found or not authorized.',
+  'Telegram workstream session does not match the selected topic. Reopen it from the selector and retry.',
+  'This Telegram workstream is active on another surface. Wait for that response to finish, then retry.',
+  'This Telegram workstream already has a browser response in progress. Wait for it to finish, then retry.',
+])
+
+export function parseStreamRequestError(body: string): string {
+  try {
+    const payload = JSON.parse(body) as Record<string, unknown>
+    const error = typeof payload.error === 'string' ? payload.error.trim() : ''
+    return PUBLIC_STREAM_REQUEST_ERRORS.has(error)
+      ? error
+      : 'Stream request failed'
+  } catch {
+    return 'Stream request failed'
+  }
+}
+
 type StreamingState = {
   isStreaming: boolean
   streamingMessageId: string | null
@@ -883,7 +907,7 @@ export function useStreamingMessage(options: UseStreamingMessageOptions = {}) {
 
         if (!response.ok) {
           const errorText = await response.text()
-          throw new Error(errorText || 'Stream request failed')
+          throw new Error(parseStreamRequestError(errorText))
         }
 
         const resolvedHeaders = readResolvedSessionHeaders(response.headers, {

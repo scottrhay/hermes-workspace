@@ -22,7 +22,7 @@
 
 ## Automated gates
 
-- Focused Vitest: 32 tests across 11 files passed.
+- Focused Vitest: 42 tests across 12 files passed.
 - Full Vitest: 741 passed and 33 failed across 11 files; the failure count exactly matches the recorded upstream baseline of 33, so this change introduced no additional full-suite failures.
 - New-file ESLint: passed; repository-wide lint still has pre-existing unrelated violations in large legacy files.
 - New-file Prettier and `git diff --check`: passed.
@@ -43,6 +43,17 @@
 - Mismatched stable-key/concrete-session pairs return HTTP 403 without persistence: pass.
 - Two sequential completed browser sends to the same inactive topic both return HTTP 200 and persist, proving lock release: pass.
 - Telegram stream errors expose only a generic browser message; upstream diagnostics remain server-side: pass.
+- The stream watchdog starts before the upstream `streamChat` await and aborts/releases on timeout: pass.
+- Transport and activity heartbeat intervals use separate handles and are both cleared by the unified cleanup path: pass.
+- Untrusted plain-text and JSON proxy/server diagnostics are reduced to a generic browser error; only explicit public messages are displayed: pass.
+- Telegram `tool.failed` events expose and persist only a generic result, preventing the browser-readable active-run API from returning upstream diagnostics: pass.
+- Extracted lifecycle behavior tests cover completion, cancellation, upstream error, watchdog timeout, lock reacquisition, and heartbeat cleanup: pass.
+- Synthetic live polling and completion backfill sanitize errored tool results before browser emission: pass.
+- Normal upstream termination without `run.completed` dispatches terminal cleanup instead of waiting for the watchdog: pass.
+- Timeout, thrown upstream error, and normal upstream termination persist terminal run status so the active-run API cannot restore a phantom `Thinking` state: pass.
+- Recoverable `tool.failed` events remain tool-level errors while the run stays active; only run-level terminal events remove it from active-run recovery: pass.
+- Telegram errors use the same generic public mapping even when a discovered local model forces portable routing; opaque diagnostics are neither streamed nor persisted: pass.
+- Terminal handlers await durable run-status persistence before closing SSE/resources, eliminating the immediate active-run recovery race: pass.
 - Post-ship independent review findings were remediated; final re-review pending.
 - Scott acceptance of the corrected daily browser experience: pending.
 

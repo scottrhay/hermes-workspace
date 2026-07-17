@@ -37,10 +37,25 @@ describe('Telegram browser-send continuity wiring', () => {
     const route = source('src/routes/api/send-stream.ts')
 
     expect(route.match(/closeStream\s*=/g)).toHaveLength(1)
+    expect(route).toContain('createTelegramStreamLifecycle')
+    expect(route).toContain('createTelegramStreamTerminalHandlers')
     expect(route).toContain('releaseTelegramSendLock?.()')
     expect(route).toContain('streamController?.close()')
-    expect(route.match(/Hermes response failed\. Retry shortly\./g)).toHaveLength(
-      2,
+    expect(route.match(/streamLifecycle\.setInterval/g)).toHaveLength(2)
+    expect(route.indexOf('streamLifecycle.setTimeout')).toBeLessThan(
+      route.indexOf('await streamChat('),
+    )
+    expect(route).toContain('publicTelegramToolFailure')
+    expect(route).toContain('publicTelegramToolEvent')
+    expect(route).toContain('result: translated.result')
+    expect(route).toContain('result: publicSynthetic.result')
+    expect(route).toContain('streamTerminal.complete()')
+    expect(route).toContain('streamTerminal.cancel()')
+    expect(route).toContain('streamTerminal.timeout()')
+    expect(route).toContain('streamTerminal.upstreamError(')
+    expect(route).toContain('streamTerminal.upstreamEnd()')
+    expect(route.match(/publicTelegramStreamFailure\(/g)).toHaveLength(
+      3,
     )
   })
 })

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { shouldResolveStreamSession } from './use-streaming-message'
+import {
+  parseStreamRequestError,
+  shouldResolveStreamSession,
+} from './use-streaming-message'
 
 describe('shouldResolveStreamSession', () => {
   it('does not promote backend api session ids over concrete Workspace sessions', () => {
@@ -42,5 +45,35 @@ describe('shouldResolveStreamSession', () => {
         pinMainSession: false,
       }),
     ).toBe(true)
+  })
+})
+
+describe('parseStreamRequestError', () => {
+  it('returns the server-provided safe error field', () => {
+    expect(
+      parseStreamRequestError(
+        JSON.stringify({
+          ok: false,
+          error:
+            'Telegram workstream session does not match the selected topic. Reopen it from the selector and retry.',
+        }),
+      ),
+    ).toBe(
+      'Telegram workstream session does not match the selected topic. Reopen it from the selector and retry.',
+    )
+  })
+
+  it('does not expose raw proxy or server response bodies', () => {
+    expect(parseStreamRequestError('proxy diagnostic: bearer secret')).toBe(
+      'Stream request failed',
+    )
+    expect(
+      parseStreamRequestError(JSON.stringify({ detail: 'internal path' })),
+    ).toBe('Stream request failed')
+    expect(
+      parseStreamRequestError(
+        JSON.stringify({ error: 'OPAQUE_PROXY_DIAGNOSTIC_91ac' }),
+      ),
+    ).toBe('Stream request failed')
   })
 })

@@ -23,10 +23,15 @@ import { openaiChat } from '../../server/openai-compat-api'
 import { streamResponses } from '../../server/responses-api'
 import { selectPortableConversationHistory } from '../../server/portable-history'
 import { acquireTelegramSendLock } from '../../server/telegram-send-lock'
+import { createTelegramStreamLifecycle } from '../../server/telegram-stream-lifecycle'
+import { createTelegramStreamTerminalHandlers } from '../../server/telegram-stream-terminal'
 import {
   getTelegramOwnerUserId,
   isAuthorizedTelegramSessionPair,
   isTelegramWorkstreamActive,
+  publicTelegramStreamFailure,
+  publicTelegramToolEvent,
+  publicTelegramToolFailure,
   resolveAuthorizedTelegramWorkstream,
 } from '../../server/telegram-workstreams'
 import {
@@ -476,7 +481,9 @@ export const Route = createFileRoute('/api/send-stream')({
           sessionKey = resolved.sessionKey
           resolvedFriendlyId = resolved.sessionKey
         } catch (err) {
-          const errorMsg = normalizeClaudeErrorMessage(err)
+          const errorMsg = gatewaySessionKey
+            ? 'Telegram workstream request failed. Retry shortly.'
+            : normalizeClaudeErrorMessage(err)
           if (errorMsg === 'session not found') {
             return new Response(
               JSON.stringify({ ok: false, error: 'session not found' }),
@@ -544,60 +551,43 @@ export const Route = createFileRoute('/api/send-stream')({
         let activeRunSessionKey: string | null = null
         let persistedRunReady: Promise<unknown> | null = null
         let unregisterTimer: ReturnType<typeof setTimeout> | null = null
-        let streamTimeoutTimer: ReturnType<typeof setTimeout> | null = null
-        let heartbeatTimer: ReturnType<typeof setInterval> | null = null
         let streamController: ReadableStreamDefaultController<Uint8Array> | null =
           null
         const abortController = new AbortController()
+        const streamLifecycle = createTelegramStreamLifecycle({
+          releaseLock() {
+            releaseTelegramSendLock?.()
+            releaseTelegramSendLock = null
+          },
+          abortUpstream() {
+            abortController.abort()
+          },
+          closeController() {
+            try {
+              streamController?.close()
+            } catch {
+              // ignore
+            }
+            streamController = null
+          },
+        })
         // Close out the SSE stream — stop enqueueing, clear timers, and
         // abort the upstream Hermes gateway request so the agent stops
         // processing.  Does NOT touch run status (persistActiveRun etc.).
         // The abort path (request.signal / handleAbort) owns run cleanup.
-        let closeStream = () => {
+        const closeStream = () => {
           if (streamClosed) return
           streamClosed = true
-          if (heartbeatTimer) {
-            clearInterval(heartbeatTimer)
-            heartbeatTimer = null
-          }
           if (unregisterTimer) {
             clearTimeout(unregisterTimer)
             unregisterTimer = null
-          }
-          if (streamTimeoutTimer) {
-            clearTimeout(streamTimeoutTimer)
-            streamTimeoutTimer = null
           }
           if (activeRunId) {
             unregisterActiveSendRun(activeRunId)
             activeRunId = null
           }
-          releaseTelegramSendLock?.()
-          releaseTelegramSendLock = null
-          abortController.abort()
-          try {
-            streamController?.close()
-          } catch {
-            // ignore
-          }
-          streamController = null
+          streamLifecycle.close()
         }
-
-        // When the client hits Stop / navigates away / closes the tab, the
-        // request.signal fires abort.  Stop the upstream agent (closeStream)
-        // and clean up run tracking so we don't burn API credits on an orphan.
-        function handleAbort() {
-          if (activeRunId && !streamClosed) {
-            persistActiveRun((runSessionKey, activeId) =>
-              markRunStatus(runSessionKey, activeId, 'handoff'),
-            )
-            unregisterActiveSendRun(activeRunId)
-            activeRunId = null
-          }
-          closeStream()
-        }
-        request.signal.addEventListener('abort', () => handleAbort(), { once: true })
-
         const persistRunStarted = (
           runId: string | undefined,
           runSessionKey: string,
@@ -615,13 +605,27 @@ export const Route = createFileRoute('/api/send-stream')({
         const persistActiveRun = (
           write: (sessionKey: string, runId: string) => Promise<unknown>,
         ) => {
-          if (!activeRunId || !activeRunSessionKey) return
+          if (!activeRunId || !activeRunSessionKey) return Promise.resolve(null)
           const runId = activeRunId
           const runSessionKey = activeRunSessionKey
-          void (persistedRunReady ?? Promise.resolve())
+          return (persistedRunReady ?? Promise.resolve())
             .then(() => write(runSessionKey, runId))
             .catch(() => null)
         }
+        const streamTerminal = createTelegramStreamTerminalHandlers({
+          closeStream,
+          persistStatus(status, errorMessage) {
+            return persistActiveRun((runSessionKey, activeId) =>
+              markRunStatus(runSessionKey, activeId, status, errorMessage),
+            )
+          },
+        })
+
+        // All terminal paths persist state before releasing stream resources.
+        function handleAbort() {
+          streamTerminal.cancel()
+        }
+        request.signal.addEventListener('abort', () => handleAbort(), { once: true })
 
         const stream = new ReadableStream({
           async start(controller) {
@@ -643,13 +647,20 @@ export const Route = createFileRoute('/api/send-stream')({
               enqueueRaw(payload)
             }
 
+            streamLifecycle.setTimeout(() => {
+              if (!streamClosed) {
+                sendEvent('error', { message: 'Stream timeout' })
+                streamTerminal.timeout()
+              }
+            }, SEND_STREAM_RUN_TIMEOUT_MS)
+
             // Cloudflare Tunnel/Access can otherwise leave small SSE streams idle
             // long enough that the browser-side fetch is canceled before visible
             // assistant chunks arrive. Send an initial padding comment and a
             // lightweight recognized event periodically so public Workspace chats
             // do not sit at "Thinking…" until the frontend reports failure.
             enqueueRaw(`: ${' '.repeat(2048)}\n\n`)
-            heartbeatTimer = setInterval(() => {
+            streamLifecycle.setInterval(() => {
               if (streamClosed) return
               if (Date.now() - lastClientEventAt < 10_000) return
               // Heartbeat to keep Cloudflare/Access from culling the SSE stream.
@@ -665,7 +676,7 @@ export const Route = createFileRoute('/api/send-stream')({
             // no-activity timer fires after 2-3 min and aborts the stream.
             // Every 10s we also forward the last known activity so the UI can
             // show meaningful progress instead of a static "Thinking…".
-            heartbeatTimer = setInterval(() => {
+            streamLifecycle.setInterval(() => {
               sendEvent('heartbeat', { timestamp: Date.now(), activity: lastActivity })
             }, 10_000)
 
@@ -875,9 +886,6 @@ export const Route = createFileRoute('/api/send-stream')({
                         timestamp: Date.now(),
                       })
                       touchLocalSession(portableSessionKey)
-                      persistActiveRun((runSessionKey, activeId) =>
-                        markRunStatus(runSessionKey, activeId, 'complete'),
-                      )
                       sendEvent('done', {
                         state: 'complete',
                         sessionKey: portableSessionKey,
@@ -890,7 +898,7 @@ export const Route = createFileRoute('/api/send-stream')({
                           ],
                         },
                       })
-                      closeStream()
+                      streamTerminal.complete()
                       return
                     } catch (err) {
                       // Log and fall through to the openaiChat path so a
@@ -990,9 +998,6 @@ export const Route = createFileRoute('/api/send-stream')({
                   })
                   touchLocalSession(portableSessionKey)
 
-                  persistActiveRun((runSessionKey, activeId) =>
-                    markRunStatus(runSessionKey, activeId, 'complete'),
-                  )
                   sendEvent('done', {
                     state: 'complete',
                     sessionKey: portableSessionKey,
@@ -1005,19 +1010,19 @@ export const Route = createFileRoute('/api/send-stream')({
                       ],
                     },
                   })
-                  closeStream()
+                  streamTerminal.complete()
                 } catch (err) {
                   if (!streamClosed) {
-                    const errorMessage = normalizeClaudeErrorMessage(err)
-                    persistActiveRun((runSessionKey, activeId) =>
-                      markRunStatus(runSessionKey, activeId, 'error', errorMessage),
+                    const errorMessage = publicTelegramStreamFailure(
+                      gatewaySessionKey,
+                      normalizeClaudeErrorMessage(err),
                     )
                     sendEvent('error', {
                       message: errorMessage,
                       sessionKey: portableSessionKey,
                       runId,
                     })
-                    closeStream()
+                    streamTerminal.upstreamError(errorMessage)
                   }
                 }
                 return
@@ -1142,7 +1147,10 @@ export const Route = createFileRoute('/api/send-stream')({
                       continue
                     }
                     for (const synthetic of syntheticEvents) {
-                      sendEvent('tool', synthetic)
+                      sendEvent(
+                        'tool',
+                        publicTelegramToolEvent(gatewaySessionKey, synthetic),
+                      )
                     }
                   } catch {
                     // Best-effort polling; ignore transient errors.
@@ -1153,6 +1161,7 @@ export const Route = createFileRoute('/api/send-stream')({
                 }
               })()
 
+              let upstreamEndedNormally = false
               try {
                 await streamChat(
                 sessionKey,
@@ -1487,7 +1496,10 @@ export const Route = createFileRoute('/api/send-stream')({
                         phase: 'error',
                         name: toolName,
                         toolCallId: getToolCallId(data, runId, toolName),
-                        result: errorMessage,
+                        result: publicTelegramToolFailure(
+                          gatewaySessionKey,
+                          errorMessage,
+                        ),
                         sessionKey: sessionKeyFromEvent,
                         runId,
                       }
@@ -1512,22 +1524,16 @@ export const Route = createFileRoute('/api/send-stream')({
                         ) ||
                         readString(data.message) ||
                         'Hermes stream error'
-                      persistActiveRun((runSessionKey, activeId) =>
-                        markRunStatus(
-                          runSessionKey,
-                          activeId,
-                          'error',
-                          errorMessage,
-                        ),
+                      const publicErrorMessage = publicTelegramStreamFailure(
+                        gatewaySessionKey,
+                        errorMessage,
                       )
                       sendEvent('error', {
-                        message: gatewaySessionKey
-                          ? 'Hermes response failed. Retry shortly.'
-                          : errorMessage,
+                        message: publicErrorMessage,
                         sessionKey: sessionKeyFromEvent,
                         runId,
                       })
-                      closeStream()
+                      streamTerminal.upstreamError(publicErrorMessage)
                       return
                     }
 
@@ -1599,6 +1605,10 @@ export const Route = createFileRoute('/api/send-stream')({
                               runId,
                             })
                             for (const synthetic of syntheticEvents) {
+                              const publicSynthetic = publicTelegramToolEvent(
+                                gatewaySessionKey,
+                                synthetic,
+                              )
                               persistActiveRun(
                                 (runSessionKey, activeId) =>
                                   upsertRunToolCall(
@@ -1609,13 +1619,13 @@ export const Route = createFileRoute('/api/send-stream')({
                                       name: synthetic.name,
                                       phase: synthetic.phase,
                                       args: synthetic.args,
-                                      result: synthetic.result,
+                                      result: publicSynthetic.result,
                                     },
                                   ),
                               )
-                              sendEvent('tool', synthetic)
+                              sendEvent('tool', publicSynthetic)
                               skipPublish ||
-                                publishChatEvent('tool', synthetic)
+                                publishChatEvent('tool', publicSynthetic)
                             }
                           }
                         }
@@ -1632,16 +1642,14 @@ export const Route = createFileRoute('/api/send-stream')({
                         sessionKey: sessionKeyFromEvent,
                         runId,
                       }
-                      persistActiveRun((runSessionKey, activeId) =>
-                        markRunStatus(runSessionKey, activeId, 'complete'),
-                      )
                       sendEvent('done', translated)
                       skipPublish || publishChatEvent('done', translated)
-                      closeStream()
+                      streamTerminal.complete()
                     }
                   },
                 },
                 )
+                upstreamEndedNormally = true
               } finally {
                 // Stop the mid-run tool poller and let it drain.
                 liveRunActive = false
@@ -1650,41 +1658,28 @@ export const Route = createFileRoute('/api/send-stream')({
                 } catch {
                   // ignore
                 }
+                if (upstreamEndedNormally) streamTerminal.upstreamEnd()
               }
 
-              // Set a timeout to close the stream if no completion event
-              streamTimeoutTimer = setTimeout(() => {
-                if (!streamClosed) {
-                  sendEvent('error', { message: 'Stream timeout' })
-                  closeStream()
-                }
-              }, SEND_STREAM_RUN_TIMEOUT_MS)
             } catch (err) {
               // Only send error if stream hasn't already completed successfully
               if (!streamClosed) {
-                const errorMsg = gatewaySessionKey
-                  ? 'Hermes response failed. Retry shortly.'
-                  : normalizeClaudeErrorMessage(err)
+                const errorMsg = publicTelegramStreamFailure(
+                  gatewaySessionKey,
+                  normalizeClaudeErrorMessage(err),
+                )
                 sendEvent('error', {
                   message: errorMsg,
                   sessionKey,
                 })
-                closeStream()
+                streamTerminal.upstreamError(errorMsg)
               }
             }
           },
           cancel() {
             // User clicked Stop, navigated away, or browser closed the tab.
-            // Mark the stream complete, persist the run as 'handoff' so
-            // session history reflects the interruption, then delegate to
-            // closeStream() for timer/controller cleanup.  Delegate instead
-            // of duplicating cleanup logic to keep the two paths in sync.
-            if (activeRunId && !streamClosed) {
-              persistActiveRun((runSessionKey, activeId) =>
-                markRunStatus(runSessionKey, activeId, 'handoff'),
-              )
-            }
-            closeStream()
+            // The shared terminal owner persists handoff before cleanup.
+            return streamTerminal.cancel()
           },
         })
 

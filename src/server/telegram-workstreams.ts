@@ -169,6 +169,34 @@ export function isAuthorizedTelegramSessionPair(
   )
 }
 
+export function publicTelegramToolFailure(
+  gatewaySessionKey: string | undefined,
+  upstreamMessage: string,
+): string {
+  return cleanString(gatewaySessionKey)
+    ? 'Tool failed. Retry shortly.'
+    : cleanString(upstreamMessage)
+}
+
+export function publicTelegramStreamFailure(
+  gatewaySessionKey: string | undefined,
+  upstreamMessage: string,
+): string {
+  return cleanString(gatewaySessionKey)
+    ? 'Hermes response failed. Retry shortly.'
+    : cleanString(upstreamMessage)
+}
+
+export function publicTelegramToolEvent<
+  T extends { phase?: string; result?: string },
+>(gatewaySessionKey: string | undefined, event: T): T {
+  if (event.phase !== 'error' || !cleanString(gatewaySessionKey)) return event
+  return {
+    ...event,
+    result: publicTelegramToolFailure(gatewaySessionKey, event.result ?? ''),
+  }
+}
+
 export function isTelegramWorkstreamActive(
   rows: Array<TelegramSessionRow>,
   sessionKey: string,

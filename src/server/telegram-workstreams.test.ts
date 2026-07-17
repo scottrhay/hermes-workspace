@@ -4,6 +4,9 @@ import {
   isAuthorizedTelegramSessionPair,
   isTelegramWorkstreamActive,
   normalizeTelegramWorkstreams,
+  publicTelegramStreamFailure,
+  publicTelegramToolEvent,
+  publicTelegramToolFailure,
   resolveAuthorizedTelegramWorkstream,
 } from './telegram-workstreams'
 
@@ -271,6 +274,35 @@ describe('normalizeTelegramWorkstreams', () => {
         SCOTT_ID,
       ),
     ).toBe(false)
+  })
+
+  it('does not expose opaque upstream tool diagnostics for Telegram sends', () => {
+    const diagnostic = 'proxy bearer secret at /internal/path'
+
+    expect(publicTelegramToolFailure('agent:main:telegram:key', diagnostic)).toBe(
+      'Tool failed. Retry shortly.',
+    )
+    expect(publicTelegramToolFailure(undefined, diagnostic)).toBe(diagnostic)
+    expect(
+      publicTelegramToolEvent('agent:main:telegram:key', {
+        phase: 'error',
+        result: diagnostic,
+        toolCallId: 'call-1',
+      }),
+    ).toEqual({
+      phase: 'error',
+      result: 'Tool failed. Retry shortly.',
+      toolCallId: 'call-1',
+    })
+  })
+
+  it('does not expose portable stream diagnostics for Telegram sends', () => {
+    const diagnostic = 'OPAQUE_LOCAL_MODEL_DIAGNOSTIC_8f2a /internal/path'
+
+    expect(
+      publicTelegramStreamFailure('agent:main:telegram:key', diagnostic),
+    ).toBe('Hermes response failed. Retry shortly.')
+    expect(publicTelegramStreamFailure(undefined, diagnostic)).toBe(diagnostic)
   })
 
   it('uses last activity and session id as deterministic tie breakers', () => {

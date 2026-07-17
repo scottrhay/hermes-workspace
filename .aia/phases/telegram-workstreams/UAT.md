@@ -18,6 +18,12 @@
       Observed: omitted routing metadata via raw or friendly concrete Telegram IDs returns HTTP 403; an unknown stable key returns 403; active Topic 2246 returns 409.
 - [x] Verify post-review exact pairing and lock lifecycle hardening.
       Observed: a stable key paired with another topic's concrete session returned HTTP 403 and was not persisted; two sequential completed sends to inactive Topic 25 both returned HTTP 200, returned the expected replies, and persisted, proving the browser lock was released.
+- [x] Verify post-review watchdog and heartbeat cleanup changes do not regress sequential sends.
+      Observed: two additional sequential Topic 25 sends both returned HTTP 200 with `TIMER_CLEANUP_ONE_OK` and `TIMER_CLEANUP_TWO_OK` after moving the watchdog before the upstream await and separating heartbeat timer handles.
+- [x] Verify extracted lifecycle cleanup remains wired into real browser sends.
+      Observed: two sequential Topic 25 sends returned HTTP 200 with `LIFECYCLE_ONE_OK` and `LIFECYCLE_TWO_OK` after moving watchdog/heartbeat/lock cleanup into the behaviorally tested lifecycle helper.
+- [x] Verify terminal dispatch remains wired into real browser sends.
+      Observed: two sequential Topic 25 sends returned HTTP 200 with `TERMINAL_ONE_OK` and `TERMINAL_TWO_OK` after routing completion, cancellation, timeout, upstream error, and normal upstream end through explicit terminal handlers.
 - [x] Inspect selector API output.
       Observed: 29 Scott-owned workstreams, eight named groups, zero General-topic rows, and no Telegram token/credential fields.
 - [ ] Scott switches from this Telegram topic to Mission Control and continues normal work.

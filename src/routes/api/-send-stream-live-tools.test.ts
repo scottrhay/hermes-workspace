@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { publicTelegramToolEvent } from '../../server/telegram-workstreams'
 import {
   collectSyntheticLiveToolEvents,
   createSyntheticLiveToolTracker,
@@ -101,5 +102,39 @@ describe('collectSyntheticLiveToolEvents', () => {
         runId: 'run-1',
       },
     ])
+  })
+
+  it('keeps opaque synthetic tool errors out of Telegram browser events', () => {
+    const diagnostic = 'opaque bearer secret at /internal/path'
+    const [synthetic] = collectSyntheticLiveToolEvents({
+      messages: [
+        {
+          role: 'assistant',
+          tool_calls: [
+            {
+              id: 'toolu_error',
+              function: { name: 'terminal', arguments: '{}' },
+            },
+          ],
+        },
+        {
+          role: 'tool',
+          tool_call_id: 'toolu_error',
+          content: diagnostic,
+          is_error: true,
+        },
+      ],
+      tracker: createSyntheticLiveToolTracker(),
+      sessionKey: 'session-1',
+      runId: 'run-1',
+    })
+
+    expect(synthetic.result).toBe(diagnostic)
+    expect(
+      publicTelegramToolEvent('agent:main:telegram:key', synthetic),
+    ).toMatchObject({
+      phase: 'error',
+      result: 'Tool failed. Retry shortly.',
+    })
   })
 })
