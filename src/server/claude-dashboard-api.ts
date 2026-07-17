@@ -22,6 +22,17 @@ export type DashboardSession = {
   last_active?: number | null
   is_active?: boolean
   preview?: string | null
+  session_key?: string | null
+  chat_id?: string | null
+  chat_type?: string | null
+  thread_id?: string | null
+  display_name?: string | null
+  origin_json?: string | null
+}
+
+export type SessionListOptions = {
+  source?: string
+  order?: 'created' | 'recent'
 }
 
 export type DashboardMessage = {
@@ -115,15 +126,23 @@ async function dashboardJson<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export async function listSessions(limit = 50, offset = 0): Promise<{
+export async function listSessions(
+  limit = 50,
+  offset = 0,
+  options: SessionListOptions = {},
+): Promise<{
   sessions: DashboardSession[]
   total: number
   limit: number
   offset: number
 }> {
-  return dashboardJson(
-    `/api/sessions?limit=${limit}&offset=${offset}`,
-  )
+  const query = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  })
+  if (options.source) query.set('source', options.source)
+  if (options.order) query.set('order', options.order)
+  return dashboardJson(`/api/sessions?${query.toString()}`)
 }
 
 export async function getSession(id: string): Promise<DashboardSession> {

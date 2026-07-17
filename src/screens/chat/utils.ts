@@ -266,6 +266,20 @@ export function normalizeSessions(
         typeof session.preview === 'string'
           ? cleanUserText(session.preview) || session.preview.trim() || null
           : session.preview ?? null,
+      source:
+        typeof session.source === 'string' ? session.source.trim() : undefined,
+      sessionKey:
+        typeof session.sessionKey === 'string'
+          ? session.sessionKey.trim()
+          : undefined,
+      threadId:
+        typeof session.threadId === 'string'
+          ? session.threadId.trim()
+          : undefined,
+      displayName:
+        typeof session.displayName === 'string'
+          ? session.displayName.trim()
+          : undefined,
     }
   })
 }

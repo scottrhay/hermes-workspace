@@ -4,7 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 import { chatQueryKeys, fetchSessions } from '../chat-queries'
 import { isRecentSession } from '../pending-send'
 import { filterSessionsWithTombstones } from '../session-tombstones'
+import {
+  fetchTelegramWorkstreams,
+  telegramWorkstreamQueryKey,
+} from '../telegram-workstreams'
 import { useSessionTitles } from '../session-title-store'
+import type { TelegramWorkstream } from '../telegram-workstreams'
 import type { SessionTitleInfo } from '../session-title-store'
 import type { SessionMeta } from '../types'
 
@@ -34,26 +39,49 @@ function mergeSessionTitle(
   }
 }
 
-function buildSyntheticActiveSession(
+function mergeTelegramMetadata(
+  session: SessionMeta,
+  workstream: TelegramWorkstream | undefined,
+): SessionMeta {
+  if (!workstream) return session
+  return {
+    ...session,
+    title: session.title || workstream.title,
+    derivedTitle: session.derivedTitle || workstream.title,
+    source: 'telegram',
+    sessionKey: workstream.sessionKey,
+    threadId: workstream.topicId,
+    displayName: workstream.groupName,
+  }
+}
+
+export function buildSyntheticActiveSession(
   activeFriendlyId: string,
   forcedSessionKey: string | undefined,
   stored: SessionTitleInfo | undefined,
+  telegramWorkstream?: TelegramWorkstream,
 ): SessionMeta | null {
   if (!activeFriendlyId || activeFriendlyId === 'new') return null
 
   const derivedTitle =
-    stored?.title ?? (activeFriendlyId === 'main' ? 'Hermes' : 'New Session')
+    telegramWorkstream?.title ??
+    stored?.title ??
+    (activeFriendlyId === 'main' ? 'Hermes' : 'New Session')
 
   return {
     key: forcedSessionKey || activeFriendlyId,
     friendlyId: activeFriendlyId,
     label: undefined,
-    title: undefined,
+    title: telegramWorkstream?.title,
     derivedTitle,
-    updatedAt: Date.now(),
+    updatedAt: telegramWorkstream?.updatedAt ?? Date.now(),
     titleStatus: stored?.status ?? 'idle',
     titleSource: stored?.source,
     titleError: stored?.error,
+    source: telegramWorkstream ? 'telegram' : undefined,
+    sessionKey: telegramWorkstream?.sessionKey,
+    threadId: telegramWorkstream?.topicId,
+    displayName: telegramWorkstream?.groupName,
   }
 }
 
@@ -73,23 +101,42 @@ export function useChatSessions({
     queryFn: fetchSessions,
     refetchInterval: 5000,
   })
+  const telegramWorkstreamsQuery = useQuery({
+    queryKey: telegramWorkstreamQueryKey,
+    queryFn: fetchTelegramWorkstreams,
+    refetchInterval: 10_000,
+  })
   const storedTitles = useSessionTitles()
 
   const sessions = useMemo(() => {
     const rawSessions = sessionsQuery.data ?? []
+    const workstreams = telegramWorkstreamsQuery.data ?? []
+    const workstreamBySessionId = new Map(
+      workstreams.map((workstream) => [workstream.sessionId, workstream]),
+    )
     const filtered = filterSessionsWithTombstones(rawSessions)
     const merged = filtered.map((session) =>
-      mergeSessionTitle(session, storedTitles[session.friendlyId]),
+      mergeTelegramMetadata(
+        mergeSessionTitle(session, storedTitles[session.friendlyId]),
+        workstreamBySessionId.get(session.friendlyId),
+      ),
     )
+    const activeWorkstream = workstreamBySessionId.get(activeFriendlyId)
     const activeAlreadyPresent = merged.some(
       (session) => session.friendlyId === activeFriendlyId,
     )
 
-    if (!activeAlreadyPresent && (forcedSessionKey || isRecentSession(activeFriendlyId))) {
+    if (
+      !activeAlreadyPresent &&
+      (forcedSessionKey ||
+        isRecentSession(activeFriendlyId) ||
+        activeWorkstream)
+    ) {
       const synthetic = buildSyntheticActiveSession(
         activeFriendlyId,
         forcedSessionKey,
         storedTitles[activeFriendlyId],
+        activeWorkstream,
       )
       if (synthetic) {
         merged.unshift(synthetic)
@@ -106,6 +153,7 @@ export function useChatSessions({
     forcedSessionKey,
     sessionsQuery.data,
     storedTitles,
+    telegramWorkstreamsQuery.data,
   ])
 
   const activeSession = useMemo(() => {

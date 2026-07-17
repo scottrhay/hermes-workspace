@@ -794,6 +794,7 @@ export function useStreamingMessage(options: UseStreamingMessageOptions = {}) {
   const startStreaming = useCallback(
     async (params: {
       sessionKey: string
+      gatewaySessionKey?: string
       friendlyId: string
       message: string
       history?: Array<PortableHistoryMessage>
@@ -863,6 +864,7 @@ export function useStreamingMessage(options: UseStreamingMessageOptions = {}) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sessionKey: params.sessionKey,
+            gatewaySessionKey: params.gatewaySessionKey,
             friendlyId: params.friendlyId,
             message: params.message,
             history: params.history,

@@ -93,6 +93,10 @@ export type SessionSummary = {
   titleSource?: SessionTitleSource
   titleError?: string | null
   preview?: string | null
+  source?: string
+  sessionKey?: string
+  threadId?: string
+  displayName?: string
 }
 
 export type SessionListResponse = {
@@ -117,6 +121,10 @@ export type SessionMeta = {
   titleSource?: SessionTitleSource
   titleError?: string | null
   preview?: string | null
+  source?: string
+  sessionKey?: string
+  threadId?: string
+  displayName?: string
 }
 
 export type PathsPayload = {

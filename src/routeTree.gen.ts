@@ -45,6 +45,7 @@ import { Route as ApiTerminalStreamRouteImport } from './routes/api/terminal-str
 import { Route as ApiTerminalResizeRouteImport } from './routes/api/terminal-resize'
 import { Route as ApiTerminalInputRouteImport } from './routes/api/terminal-input'
 import { Route as ApiTerminalCloseRouteImport } from './routes/api/terminal-close'
+import { Route as ApiTelegramWorkstreamsRouteImport } from './routes/api/telegram-workstreams'
 import { Route as ApiSystemMetricsRouteImport } from './routes/api/system-metrics'
 import { Route as ApiSwarmTmuxStopRouteImport } from './routes/api/swarm-tmux-stop'
 import { Route as ApiSwarmTmuxStartRouteImport } from './routes/api/swarm-tmux-start'
@@ -348,6 +349,11 @@ const ApiTerminalInputRoute = ApiTerminalInputRouteImport.update({
 const ApiTerminalCloseRoute = ApiTerminalCloseRouteImport.update({
   id: '/api/terminal-close',
   path: '/api/terminal-close',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTelegramWorkstreamsRoute = ApiTelegramWorkstreamsRouteImport.update({
+  id: '/api/telegram-workstreams',
+  path: '/api/telegram-workstreams',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSystemMetricsRoute = ApiSystemMetricsRouteImport.update({
@@ -1071,6 +1077,7 @@ export interface FileRoutesByFullPath {
   '/api/swarm-tmux-start': typeof ApiSwarmTmuxStartRoute
   '/api/swarm-tmux-stop': typeof ApiSwarmTmuxStopRoute
   '/api/system-metrics': typeof ApiSystemMetricsRoute
+  '/api/telegram-workstreams': typeof ApiTelegramWorkstreamsRoute
   '/api/terminal-close': typeof ApiTerminalCloseRoute
   '/api/terminal-input': typeof ApiTerminalInputRoute
   '/api/terminal-resize': typeof ApiTerminalResizeRoute
@@ -1232,6 +1239,7 @@ export interface FileRoutesByTo {
   '/api/swarm-tmux-start': typeof ApiSwarmTmuxStartRoute
   '/api/swarm-tmux-stop': typeof ApiSwarmTmuxStopRoute
   '/api/system-metrics': typeof ApiSystemMetricsRoute
+  '/api/telegram-workstreams': typeof ApiTelegramWorkstreamsRoute
   '/api/terminal-close': typeof ApiTerminalCloseRoute
   '/api/terminal-input': typeof ApiTerminalInputRoute
   '/api/terminal-resize': typeof ApiTerminalResizeRoute
@@ -1395,6 +1403,7 @@ export interface FileRoutesById {
   '/api/swarm-tmux-start': typeof ApiSwarmTmuxStartRoute
   '/api/swarm-tmux-stop': typeof ApiSwarmTmuxStopRoute
   '/api/system-metrics': typeof ApiSystemMetricsRoute
+  '/api/telegram-workstreams': typeof ApiTelegramWorkstreamsRoute
   '/api/terminal-close': typeof ApiTerminalCloseRoute
   '/api/terminal-input': typeof ApiTerminalInputRoute
   '/api/terminal-resize': typeof ApiTerminalResizeRoute
@@ -1559,6 +1568,7 @@ export interface FileRouteTypes {
     | '/api/swarm-tmux-start'
     | '/api/swarm-tmux-stop'
     | '/api/system-metrics'
+    | '/api/telegram-workstreams'
     | '/api/terminal-close'
     | '/api/terminal-input'
     | '/api/terminal-resize'
@@ -1720,6 +1730,7 @@ export interface FileRouteTypes {
     | '/api/swarm-tmux-start'
     | '/api/swarm-tmux-stop'
     | '/api/system-metrics'
+    | '/api/telegram-workstreams'
     | '/api/terminal-close'
     | '/api/terminal-input'
     | '/api/terminal-resize'
@@ -1882,6 +1893,7 @@ export interface FileRouteTypes {
     | '/api/swarm-tmux-start'
     | '/api/swarm-tmux-stop'
     | '/api/system-metrics'
+    | '/api/telegram-workstreams'
     | '/api/terminal-close'
     | '/api/terminal-input'
     | '/api/terminal-resize'
@@ -2045,6 +2057,7 @@ export interface RootRouteChildren {
   ApiSwarmTmuxStartRoute: typeof ApiSwarmTmuxStartRoute
   ApiSwarmTmuxStopRoute: typeof ApiSwarmTmuxStopRoute
   ApiSystemMetricsRoute: typeof ApiSystemMetricsRoute
+  ApiTelegramWorkstreamsRoute: typeof ApiTelegramWorkstreamsRoute
   ApiTerminalCloseRoute: typeof ApiTerminalCloseRoute
   ApiTerminalInputRoute: typeof ApiTerminalInputRoute
   ApiTerminalResizeRoute: typeof ApiTerminalResizeRoute
@@ -2337,6 +2350,13 @@ declare module '@tanstack/react-router' {
       path: '/api/terminal-close'
       fullPath: '/api/terminal-close'
       preLoaderRoute: typeof ApiTerminalCloseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/telegram-workstreams': {
+      id: '/api/telegram-workstreams'
+      path: '/api/telegram-workstreams'
+      fullPath: '/api/telegram-workstreams'
+      preLoaderRoute: typeof ApiTelegramWorkstreamsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/system-metrics': {
@@ -3514,6 +3534,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSwarmTmuxStartRoute: ApiSwarmTmuxStartRoute,
   ApiSwarmTmuxStopRoute: ApiSwarmTmuxStopRoute,
   ApiSystemMetricsRoute: ApiSystemMetricsRoute,
+  ApiTelegramWorkstreamsRoute: ApiTelegramWorkstreamsRoute,
   ApiTerminalCloseRoute: ApiTerminalCloseRoute,
   ApiTerminalInputRoute: ApiTerminalInputRoute,
   ApiTerminalResizeRoute: ApiTerminalResizeRoute,

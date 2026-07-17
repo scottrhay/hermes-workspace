@@ -2037,6 +2037,7 @@ export function ChatScreen({
 
       void startStreaming({
         sessionKey,
+        gatewaySessionKey: activeSession?.sessionKey,
         friendlyId,
         message: enrichedBody,
         history,
@@ -2063,6 +2064,7 @@ export function ChatScreen({
       streamFinish,
       streamStart,
       currentModel,
+      activeSession?.sessionKey,
     ],
   )
 

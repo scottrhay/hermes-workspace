@@ -34,6 +34,7 @@ import { ProvidersDialog } from './providers-dialog'
 import { SessionRenameDialog } from './sidebar/session-rename-dialog'
 import { SessionDeleteDialog } from './sidebar/session-delete-dialog'
 import { SidebarSessions } from './sidebar/sidebar-sessions'
+import { TelegramWorkstreams } from './sidebar/telegram-workstreams'
 import type { ChatOpenSettingsDetail } from '../chat-events'
 import type { SessionMeta } from '../types'
 import { t } from '@/lib/i18n'
@@ -1046,6 +1047,12 @@ function ChatSidebarComponent({
 
       {/* ── Scrollable body: nav + sessions ─────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin flex flex-col">
+        {!isVisuallyCollapsed ? (
+          <TelegramWorkstreams
+            activeFriendlyId={activeFriendlyId}
+            onSelect={onSelectSession}
+          />
+        ) : null}
         {/* Navigation sections */}
         <div className={cn('shrink-0 space-y-0.5 px-2', isMobile && 'order-2')}>
           <SectionLabel

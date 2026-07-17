@@ -22,11 +22,18 @@ import { getDiscoveredModels, getLocalProviderDef } from '../../server/local-pro
 import { openaiChat } from '../../server/openai-compat-api'
 import { streamResponses } from '../../server/responses-api'
 import { selectPortableConversationHistory } from '../../server/portable-history'
+import { acquireTelegramSendLock } from '../../server/telegram-send-lock'
+import {
+  getTelegramOwnerUserId,
+  isTelegramWorkstreamActive,
+  resolveAuthorizedTelegramWorkstream,
+} from '../../server/telegram-workstreams'
 import {
   SESSIONS_API_UNAVAILABLE_MESSAGE,
   createSession,
   ensureGatewayProbed,
   getGatewayCapabilities,
+  getSession,
   getMessages as getSessionMessagesFromAgent,
   listSessions,
   streamChat,
@@ -304,6 +311,15 @@ export const Route = createFileRoute('/api/send-stream')({
 
         const rawSessionKey =
           typeof body.sessionKey === 'string' ? body.sessionKey.trim() : ''
+        const requestedGatewaySessionKey =
+          typeof body.gatewaySessionKey === 'string'
+            ? body.gatewaySessionKey.trim()
+            : ''
+        const gatewaySessionKey = requestedGatewaySessionKey.startsWith(
+          'agent:main:telegram:',
+        )
+          ? requestedGatewaySessionKey
+          : undefined
         const requestedFriendlyId =
           typeof body.friendlyId === 'string' ? body.friendlyId.trim() : ''
         const message = String(body.message ?? '')
@@ -321,12 +337,118 @@ export const Route = createFileRoute('/api/send-stream')({
           )
         }
 
+        // Resolve and authorize Telegram targets before the generic session
+        // resolver runs. The exact target follows resolveSessionKey semantics:
+        // rawSessionKey wins, otherwise requestedFriendlyId is used.
+        let currentRawSessionKey = rawSessionKey
+        const requestedConcreteSessionId =
+          rawSessionKey || requestedFriendlyId
+
+        if (
+          !gatewaySessionKey &&
+          requestedConcreteSessionId &&
+          !SESSION_BOOTSTRAP_KEYS.has(requestedConcreteSessionId)
+        ) {
+          let requestedSession: Awaited<ReturnType<typeof getSession>>
+          try {
+            requestedSession = await getSession(requestedConcreteSessionId)
+          } catch (error) {
+            console.error('[send-stream] Exact session lookup failed', error)
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                error:
+                  'Session routing metadata is temporarily unavailable. Retry shortly.',
+              }),
+              {
+                status: 503,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            )
+          }
+          if (requestedSession.source === 'telegram') {
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                error:
+                  'Telegram workstream routing metadata is required. Reopen the workstream from the selector and retry.',
+              }),
+              {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            )
+          }
+        }
+
+        if (gatewaySessionKey) {
+          let telegramSessions: Awaited<ReturnType<typeof listSessions>>
+          try {
+            telegramSessions = await listSessions(1_000, 0, {
+              source: 'telegram',
+              order: 'recent',
+            })
+          } catch (error) {
+            console.error('[send-stream] Telegram session lookup failed', error)
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                error:
+                  'Telegram workstreams are temporarily unavailable. Retry shortly.',
+              }),
+              {
+                status: 503,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            )
+          }
+
+          const telegramOwnerUserId = getTelegramOwnerUserId()
+          const currentWorkstream = resolveAuthorizedTelegramWorkstream(
+            telegramSessions,
+            gatewaySessionKey,
+            telegramOwnerUserId,
+          )
+          if (!currentWorkstream) {
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                error: 'Telegram workstream not found or not authorized.',
+              }),
+              {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            )
+          }
+          if (
+            isTelegramWorkstreamActive(
+              telegramSessions,
+              gatewaySessionKey,
+              telegramOwnerUserId,
+            )
+          ) {
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                error:
+                  'This Telegram workstream is active on another surface. Wait for that response to finish, then retry.',
+              }),
+              {
+                status: 409,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            )
+          }
+          currentRawSessionKey = currentWorkstream.sessionId
+        }
+
         // Resolve session key
         let sessionKey: string
         let resolvedFriendlyId: string
         try {
           const resolved = await resolveSessionKey({
-            rawSessionKey,
+            rawSessionKey: currentRawSessionKey,
             friendlyId: requestedFriendlyId,
             defaultKey: 'main',
           })
@@ -376,6 +498,24 @@ export const Route = createFileRoute('/api/send-stream')({
           workspaceScope,
         )
 
+        let releaseTelegramSendLock: (() => void) | null = null
+        if (gatewaySessionKey) {
+          releaseTelegramSendLock = acquireTelegramSendLock(gatewaySessionKey)
+          if (!releaseTelegramSendLock) {
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                error:
+                  'This Telegram workstream already has a browser response in progress. Wait for it to finish, then retry.',
+              }),
+              {
+                status: 409,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            )
+          }
+        }
+
         // Create streaming response using the SHARED server connection
         const encoder = new TextEncoder()
         let streamClosed = false
@@ -405,6 +545,8 @@ export const Route = createFileRoute('/api/send-stream')({
             clearTimeout(streamTimeoutTimer)
             streamTimeoutTimer = null
           }
+          releaseTelegramSendLock?.()
+          releaseTelegramSendLock = null
           abortController.abort()
         }
 
@@ -1017,6 +1159,7 @@ export const Route = createFileRoute('/api/send-stream')({
                 },
                 {
                   signal: abortController.signal,
+                  gatewaySessionKey,
                   async onEvent({ event, data }) {
                     const sessionKeyFromEvent =
                       typeof data.session_id === 'string' &&

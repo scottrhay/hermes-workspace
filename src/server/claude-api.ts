@@ -48,6 +48,17 @@ export type ClaudeSession = {
   parent_session_id?: string | null
   last_active?: number | null
   preview?: string | null
+  session_key?: string | null
+  chat_id?: string | null
+  chat_type?: string | null
+  thread_id?: string | null
+  display_name?: string | null
+  origin_json?: string | null
+}
+
+export type SessionListOptions = {
+  source?: string
+  order?: 'created' | 'recent'
 }
 
 export type ClaudeMessage = {
@@ -128,16 +139,22 @@ export async function checkHealth(): Promise<{ status: string }> {
 export async function listSessions(
   limit = 50,
   offset = 0,
+  options: SessionListOptions = {},
 ): Promise<Array<ClaudeSession>> {
   if (getCapabilities().dashboard.available) {
-    const resp = await listDashboardSessions(limit, offset)
+    const resp = await listDashboardSessions(limit, offset, options)
     return resp.sessions as Array<ClaudeSession>
   }
+  const query = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  })
+  if (options.source) query.set('source', options.source)
   const resp = await claudeGet<{
     items?: Array<ClaudeSession>
     data?: Array<ClaudeSession>
     total?: number
-  }>(`/api/sessions?limit=${limit}&offset=${offset}`)
+  }>(`/api/sessions?${query.toString()}`)
   // The gateway (OpenAI-compat) returns { object: 'list', data: [...] }, while the
   // dashboard / older gateway shape uses { items: [...] }. Accept either, and never
   // return undefined (callers .map over this).
@@ -333,6 +350,10 @@ export function toSessionSummary(
     title: session.title || undefined,
     derivedTitle: session.title || session.preview || undefined,
     preview: session.preview || undefined,
+    source: session.source || undefined,
+    sessionKey: session.session_key || undefined,
+    threadId: session.thread_id || undefined,
+    displayName: session.display_name || undefined,
     tokenCount: (session.input_tokens ?? 0) + (session.output_tokens ?? 0),
     totalTokens: (session.input_tokens ?? 0) + (session.output_tokens ?? 0),
     message_count: session.message_count ?? 0,
@@ -361,6 +382,7 @@ export function toSessionSummary(
 
 type StreamChatOptions = {
   signal?: AbortSignal
+  gatewaySessionKey?: string
   onEvent: (payload: {
     event: string
     data: Record<string, unknown>
@@ -385,7 +407,13 @@ export async function streamChat(
     `${CLAUDE_API}/api/sessions/${sessionId}/chat/stream`,
     {
       method: 'POST',
-      headers: { ..._authHeaders(), 'Content-Type': 'application/json' },
+      headers: {
+        ..._authHeaders(),
+        'Content-Type': 'application/json',
+        ...(opts.gatewaySessionKey?.trim()
+          ? { 'X-Hermes-Session-Key': opts.gatewaySessionKey.trim() }
+          : {}),
+      },
       body: JSON.stringify(body),
       signal: opts.signal,
     },
