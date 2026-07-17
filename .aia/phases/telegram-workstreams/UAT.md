@@ -16,6 +16,8 @@
       Observed: the selector now restores the title and stable key independently of the short generic list; a real Playwright send returned `PROJECT_WEB_OK` without interruption and persisted the user/assistant pair in canonical session `20260716_120508_bbbb1b43`.
 - [x] Verify authorization failure paths.
       Observed: omitted routing metadata via raw or friendly concrete Telegram IDs returns HTTP 403; an unknown stable key returns 403; active Topic 2246 returns 409.
+- [x] Verify post-review exact pairing and lock lifecycle hardening.
+      Observed: a stable key paired with another topic's concrete session returned HTTP 403 and was not persisted; two sequential completed sends to inactive Topic 25 both returned HTTP 200, returned the expected replies, and persisted, proving the browser lock was released.
 - [x] Inspect selector API output.
       Observed: 29 Scott-owned workstreams, eight named groups, zero General-topic rows, and no Telegram token/credential fields.
 - [ ] Scott switches from this Telegram topic to Mission Control and continues normal work.

@@ -25,6 +25,7 @@ import { selectPortableConversationHistory } from '../../server/portable-history
 import { acquireTelegramSendLock } from '../../server/telegram-send-lock'
 import {
   getTelegramOwnerUserId,
+  isAuthorizedTelegramSessionPair,
   isTelegramWorkstreamActive,
   resolveAuthorizedTelegramWorkstream,
 } from '../../server/telegram-workstreams'
@@ -422,6 +423,26 @@ export const Route = createFileRoute('/api/send-stream')({
             )
           }
           if (
+            !isAuthorizedTelegramSessionPair(
+              telegramSessions,
+              gatewaySessionKey,
+              requestedConcreteSessionId,
+              telegramOwnerUserId,
+            )
+          ) {
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                error:
+                  'Telegram workstream session does not match the selected topic. Reopen it from the selector and retry.',
+              }),
+              {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            )
+          }
+          if (
             isTelegramWorkstreamActive(
               telegramSessions,
               gatewaySessionKey,
@@ -525,6 +546,8 @@ export const Route = createFileRoute('/api/send-stream')({
         let unregisterTimer: ReturnType<typeof setTimeout> | null = null
         let streamTimeoutTimer: ReturnType<typeof setTimeout> | null = null
         let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+        let streamController: ReadableStreamDefaultController<Uint8Array> | null =
+          null
         const abortController = new AbortController()
         // Close out the SSE stream — stop enqueueing, clear timers, and
         // abort the upstream Hermes gateway request so the agent stops
@@ -545,9 +568,19 @@ export const Route = createFileRoute('/api/send-stream')({
             clearTimeout(streamTimeoutTimer)
             streamTimeoutTimer = null
           }
+          if (activeRunId) {
+            unregisterActiveSendRun(activeRunId)
+            activeRunId = null
+          }
           releaseTelegramSendLock?.()
           releaseTelegramSendLock = null
           abortController.abort()
+          try {
+            streamController?.close()
+          } catch {
+            // ignore
+          }
+          streamController = null
         }
 
         // When the client hits Stop / navigates away / closes the tab, the
@@ -592,7 +625,7 @@ export const Route = createFileRoute('/api/send-stream')({
 
         const stream = new ReadableStream({
           async start(controller) {
-            let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+            streamController = controller
             let lastClientEventAt = Date.now()
             // Track the last human-readable activity so the heartbeat can
             // forward it to the UI. Without this the ThinkingBubble shows a
@@ -626,33 +659,6 @@ export const Route = createFileRoute('/api/send-stream')({
               sendEvent('hb_signal', { sessionKey })
               enqueueRaw(': keepalive\n\n')
             }, 10_000)
-
-            closeStream = () => {
-              if (streamClosed) return
-              streamClosed = true
-              if (heartbeatTimer) {
-                clearInterval(heartbeatTimer)
-                heartbeatTimer = null
-              }
-              if (unregisterTimer) {
-                clearTimeout(unregisterTimer)
-                unregisterTimer = null
-              }
-              if (streamTimeoutTimer) {
-                clearTimeout(streamTimeoutTimer)
-                streamTimeoutTimer = null
-              }
-              if (activeRunId) {
-                unregisterActiveSendRun(activeRunId)
-                activeRunId = null
-              }
-              abortController.abort()
-              try {
-                controller.close()
-              } catch {
-                // ignore
-              }
-            }
 
             // Keep the SSE stream alive during long agent processing (tool calls,
             // slow LLM responses on large contexts). Without this the client-side
@@ -1515,7 +1521,9 @@ export const Route = createFileRoute('/api/send-stream')({
                         ),
                       )
                       sendEvent('error', {
-                        message: errorMessage,
+                        message: gatewaySessionKey
+                          ? 'Hermes response failed. Retry shortly.'
+                          : errorMessage,
                         sessionKey: sessionKeyFromEvent,
                         runId,
                       })
@@ -1654,7 +1662,9 @@ export const Route = createFileRoute('/api/send-stream')({
             } catch (err) {
               // Only send error if stream hasn't already completed successfully
               if (!streamClosed) {
-                const errorMsg = normalizeClaudeErrorMessage(err)
+                const errorMsg = gatewaySessionKey
+                  ? 'Hermes response failed. Retry shortly.'
+                  : normalizeClaudeErrorMessage(err)
                 sendEvent('error', {
                   message: errorMsg,
                   sessionKey,

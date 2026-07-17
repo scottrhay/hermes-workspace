@@ -24,11 +24,23 @@ describe('Telegram browser-send continuity wiring', () => {
     const route = source('src/routes/api/send-stream.ts')
 
     expect(route).toContain('resolveAuthorizedTelegramWorkstream')
+    expect(route).toContain('isAuthorizedTelegramSessionPair')
     expect(route).toContain('acquireTelegramSendLock')
     expect(route).toContain('status: 403')
     expect(route).toContain('status: 409')
     expect(route).toContain('status: 503')
     expect(route).toContain('currentWorkstream.sessionId')
     expect(route).toContain('gatewaySessionKey,')
+  })
+
+  it('uses one cleanup path that releases the Telegram lock and hides upstream diagnostics', () => {
+    const route = source('src/routes/api/send-stream.ts')
+
+    expect(route.match(/closeStream\s*=/g)).toHaveLength(1)
+    expect(route).toContain('releaseTelegramSendLock?.()')
+    expect(route).toContain('streamController?.close()')
+    expect(route.match(/Hermes response failed\. Retry shortly\./g)).toHaveLength(
+      2,
+    )
   })
 })

@@ -148,6 +148,27 @@ export function resolveAuthorizedTelegramWorkstream(
   )
 }
 
+export function isAuthorizedTelegramSessionPair(
+  rows: Array<TelegramSessionRow>,
+  sessionKey: string,
+  concreteSessionId: string,
+  ownerUserId: string,
+): boolean {
+  const key = cleanString(sessionKey)
+  const sessionId = cleanString(concreteSessionId)
+  const owner = cleanString(ownerUserId)
+  if (!key || !sessionId || !owner) return false
+
+  return rows.some(
+    (row) =>
+      cleanString(row.source).toLowerCase() === 'telegram' &&
+      cleanString(row.user_id) === owner &&
+      cleanString(row.session_key) === key &&
+      cleanString(row.id) === sessionId &&
+      cleanString(row.thread_id) !== '1',
+  )
+}
+
 export function isTelegramWorkstreamActive(
   rows: Array<TelegramSessionRow>,
   sessionKey: string,

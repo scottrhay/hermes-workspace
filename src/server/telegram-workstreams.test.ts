@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   getTelegramOwnerUserId,
+  isAuthorizedTelegramSessionPair,
   isTelegramWorkstreamActive,
   normalizeTelegramWorkstreams,
   resolveAuthorizedTelegramWorkstream,
@@ -226,6 +227,50 @@ describe('normalizeTelegramWorkstreams', () => {
     expect(
       resolveAuthorizedTelegramWorkstream(rows, 'unknown-key', SCOTT_ID),
     ).toBeNull()
+  })
+
+  it('requires the concrete session to belong to the same Scott-owned stable key', () => {
+    const rows = [
+      {
+        id: 'older-session',
+        source: 'telegram',
+        user_id: SCOTT_ID,
+        session_key: 'stable-key',
+        thread_id: '25',
+      },
+      {
+        id: 'other-session',
+        source: 'telegram',
+        user_id: SCOTT_ID,
+        session_key: 'other-key',
+        thread_id: '633',
+      },
+    ]
+
+    expect(
+      isAuthorizedTelegramSessionPair(
+        rows,
+        'stable-key',
+        'older-session',
+        SCOTT_ID,
+      ),
+    ).toBe(true)
+    expect(
+      isAuthorizedTelegramSessionPair(
+        rows,
+        'stable-key',
+        'other-session',
+        SCOTT_ID,
+      ),
+    ).toBe(false)
+    expect(
+      isAuthorizedTelegramSessionPair(
+        rows,
+        'stable-key',
+        'missing-session',
+        SCOTT_ID,
+      ),
+    ).toBe(false)
   })
 
   it('uses last activity and session id as deterministic tie breakers', () => {

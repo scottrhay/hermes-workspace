@@ -40,7 +40,10 @@
 - Scott's failed `Customer Portal URL for David` send was reproduced and traced to stable-key loss outside the generic 50-session list: pass.
 - Corrected Projects selector send returned `PROJECT_WEB_OK` and persisted the canonical pair without `Operation interrupted`: pass.
 - Omitted or unknown Telegram routing keys return HTTP 403; authoritative lookup/probe failures return generic HTTP 503: pass.
-- Independent final review: passed with no security concerns or logic errors.
+- Mismatched stable-key/concrete-session pairs return HTTP 403 without persistence: pass.
+- Two sequential completed browser sends to the same inactive topic both return HTTP 200 and persist, proving lock release: pass.
+- Telegram stream errors expose only a generic browser message; upstream diagnostics remain server-side: pass.
+- Post-ship independent review findings were remediated; final re-review pending.
 - Scott acceptance of the corrected daily browser experience: pending.
 
 ## Remaining risk
