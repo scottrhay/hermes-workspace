@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { QueryClient } from '@tanstack/react-query'
-import { reconcileSessionDraft } from './chat-queries'
-import type { SessionMeta } from './types'
+import {
+  appendHistoryMessage,
+  chatQueryKeys,
+  reconcileSessionDraft,
+} from './chat-queries'
+import type { HistoryResponse, SessionMeta } from './types'
 
 function makeSession(overrides: Partial<SessionMeta> = {}): SessionMeta {
   return {
@@ -88,5 +92,39 @@ describe('reconcileSessionDraft', () => {
     expect(sessions[0].lastMessage).toMatchObject({
       timestamp: 500,
     })
+  })
+})
+
+describe('appendHistoryMessage', () => {
+  it('reconciles a Telegram-framed canonical echo with the clean optimistic WebUI message', () => {
+    const queryClient = new QueryClient()
+    const key = chatQueryKeys.history('session-1', 'telegram:topic:2246')
+    queryClient.setQueryData(key, {
+      sessionKey: 'telegram:topic:2246',
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Run the tests' }],
+          __optimisticId: 'opt-webui-1',
+          status: 'sending',
+          timestamp: Date.now() - 60_000,
+        },
+      ],
+    } satisfies HistoryResponse)
+
+    appendHistoryMessage(queryClient, 'session-1', 'telegram:topic:2246', {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: '[Scott Hay] <workspace_context active="true" name="Home" path="/home/scott/workspace" />\n\nRun the tests',
+        },
+      ],
+      timestamp: Date.now(),
+    })
+
+    const history = queryClient.getQueryData(key) as HistoryResponse
+    expect(history.messages).toHaveLength(1)
+    expect(history.messages[0]?.__optimisticId).toBeUndefined()
   })
 })

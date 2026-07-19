@@ -1,4 +1,4 @@
-import { normalizeSessions, readError } from './utils'
+import { normalizeSessions, readError, textFromMessage } from './utils'
 import type { QueryClient } from '@tanstack/react-query'
 import type {
   ChatMessage,
@@ -126,6 +126,11 @@ export function updateHistoryMessages(
  * comparison. Handles both content-array and legacy text/message fields.
  */
 function normalizeMessageText(message: ChatMessage): string {
+  if (message.role === 'user') {
+    const visibleText = textFromMessage(message).trim()
+    if (visibleText.length > 0) return visibleText
+  }
+
   const raw = message as Record<string, unknown>
 
   // Prefer structured content array (canonical format)
@@ -177,8 +182,6 @@ function replaceMatchingOptimisticUserMessage(
   const incomingOptimisticId = getMessageOptimisticId(incomingMessage)
   const incomingText = normalizeMessageText(incomingMessage)
   const incomingAttachSig = normalizeAttachmentSignature(incomingMessage)
-  const nowMs = Date.now()
-  const TEN_SECONDS = 10_000
 
   const matchIndex = messages.findIndex((message) => {
     if (message.role !== 'user') return false
@@ -212,16 +215,9 @@ function replaceMatchingOptimisticUserMessage(
 
     if (!isContentMatch) return false
 
-    const timestamp =
-      typeof raw.timestamp === 'number' && Number.isFinite(raw.timestamp)
-        ? raw.timestamp
-        : null
-    if (timestamp !== null) {
-      return nowMs - timestamp < TEN_SECONDS
-    }
-
-    const idx = messages.indexOf(message)
-    return idx >= messages.length - 5
+    // A content-matching optimistic message has not yet been confirmed by the
+    // canonical history. Reconcile it regardless of gateway queue delay.
+    return true
   })
 
   if (matchIndex === -1) return null

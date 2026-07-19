@@ -18,6 +18,29 @@ describe('chat utils workspace directive cleanup', () => {
     expect(textFromMessage(message)).toBe('Run the tests')
   })
 
+  it('hides a Telegram sender label when it only frames a WebUI workspace directive', () => {
+    const message: ChatMessage = {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: '[Scott Hay] <workspace_context active="true" name="Home" path="/home/scott/workspace" />\n\nRun the tests',
+        },
+      ],
+    }
+
+    expect(textFromMessage(message)).toBe('Run the tests')
+  })
+
+  it('preserves ordinary bracketed user text without a workspace directive', () => {
+    const message: ChatMessage = {
+      role: 'user',
+      content: [{ type: 'text', text: '[Scott Hay] This is ordinary text' }],
+    }
+
+    expect(textFromMessage(message)).toBe('[Scott Hay] This is ordinary text')
+  })
+
   it('strips workspace_context directives from session previews and derived titles', () => {
     const sessions = normalizeSessions([
       {
