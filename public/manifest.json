@@ -1,7 +1,7 @@
 {
-  "name": "Hermes Workspace",
-  "short_name": "Hermes",
-  "description": "Installable control surface for Hermes Agent chat, tools, files, memory, jobs, and agent workflows.",
+  "name": "AIA Copilot Mission Control",
+  "short_name": "Mission Control",
+  "description": "Installable AIA Copilot Mission Control for chat, tools, files, memory, jobs, and agent workflows.",
   "id": "/?app=hermes-workspace",
   "start_url": "/?source=pwa",
   "scope": "/",
@@ -13,13 +13,13 @@
   "categories": ["productivity", "utilities", "developer"],
   "icons": [
     {
-      "src": "/claude-icon-192.png",
+      "src": "/aia-copilot-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/claude-icon-512.png",
+      "src": "/aia-copilot-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

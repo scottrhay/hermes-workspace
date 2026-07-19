@@ -127,12 +127,12 @@ export const Route = createRootRoute({
           'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual',
       },
       {
-        title: 'Hermes Workspace',
+        title: 'AIA Copilot Mission Control',
       },
       {
         name: 'description',
         content:
-          'Hermes Agent workspace for chat, tools, files, memory, and jobs.',
+          'AIA Copilot Mission Control for chat, tools, files, memory, and jobs.',
       },
       {
         property: 'og:image',
@@ -172,7 +172,7 @@ export const Route = createRootRoute({
       {
         rel: 'icon',
         type: 'image/png',
-        href: '/claude-avatar.png',
+        href: '/aia-copilot-favicon.png',
       },
       // PWA manifest and icons
       {
@@ -181,7 +181,7 @@ export const Route = createRootRoute({
       },
       {
         rel: 'apple-touch-icon',
-        href: '/apple-touch-icon.png',
+        href: '/aia-copilot-apple-touch-icon.png',
         sizes: '180x180',
       },
     ],
