@@ -11,6 +11,8 @@ export type TelegramWorkstream = {
   title: string
   updatedAt: number
   messageCount: number
+  isActive?: boolean
+  preview?: string
 }
 
 export type TelegramWorkstreamGroup = {

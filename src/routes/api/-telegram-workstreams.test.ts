@@ -67,6 +67,8 @@ describe('GET /api/telegram-workstreams', () => {
         started_at: 100,
         last_active: 200,
         message_count: 12,
+        is_active: true,
+        preview: 'Ariel is preparing the Mission Control update.',
       },
     ] as any)
 
@@ -89,6 +91,8 @@ describe('GET /api/telegram-workstreams', () => {
           title: 'Mission Control integration',
           updatedAt: 200000,
           messageCount: 12,
+          isActive: true,
+          preview: 'Ariel is preparing the Mission Control update.',
         },
       ],
     })

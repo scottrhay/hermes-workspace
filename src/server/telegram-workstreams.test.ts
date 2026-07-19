@@ -195,6 +195,8 @@ describe('normalizeTelegramWorkstreams', () => {
         title: 'Topic 88',
         updatedAt: 100000,
         messageCount: 0,
+        isActive: false,
+        preview: '',
       },
     ])
     expect(result[0]).not.toHaveProperty('origin_json')

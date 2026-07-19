@@ -13,6 +13,7 @@ export type TelegramSessionRow = {
   last_active?: number | null
   message_count?: number | null
   is_active?: boolean | null
+  preview?: string | null
 }
 
 export type TelegramWorkstream = {
@@ -23,6 +24,8 @@ export type TelegramWorkstream = {
   title: string
   updatedAt: number
   messageCount: number
+  isActive: boolean
+  preview: string
 }
 
 function cleanString(value: unknown): string {
@@ -131,6 +134,8 @@ export function normalizeTelegramWorkstreams(
           Number.isFinite(row.message_count)
             ? row.message_count
             : 0,
+        isActive: row.is_active === true,
+        preview: cleanString(row.preview),
       }
     })
     .sort((a, b) => b.updatedAt - a.updatedAt)
