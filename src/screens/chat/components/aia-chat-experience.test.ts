@@ -54,6 +54,13 @@ describe('AIA chat experience', () => {
     expect(composer).toContain('aria-live="polite"')
   })
 
+  it('uses a platform-neutral composer placeholder', async () => {
+    const composer = await readFile(composerUrl, 'utf8')
+
+    expect(composer).toContain("const promptPlaceholder = 'Ask anything...'")
+    expect(composer).not.toContain('⌘⇧M switch model')
+  })
+
   it('shows truthful Ariel status beside the assistant avatar before reply text arrives', async () => {
     const messageList = await readFile(messageListUrl, 'utf8')
 

@@ -18,6 +18,7 @@ describe('AIA navigation', () => {
     expect(source).toContain('src="/aia-session-logo.webp"')
     expect(source).toContain('alt="AIA Copilot"')
     expect(source).toContain('Mission Control')
+    expect(source).not.toContain('<span>New Session</span>')
     expect(source).not.toContain('Hermes Workspace\n                </span>')
   })
 

@@ -14,7 +14,6 @@ import {
   McpServerIcon,
   MessageMultiple01Icon,
   Moon02Icon,
-  PencilEdit02Icon,
   PuzzleIcon,
   Rocket01Icon,
   Search01Icon,
@@ -572,8 +571,6 @@ function ChatSidebarComponent({
   // Route active states
   const isChatActive =
     pathname === '/' || pathname === '/new' || pathname.startsWith('/chat')
-  const isNewSessionActive =
-    pathname === '/new' || pathname.startsWith('/chat/new')
   const _isSettingsActive = pathname === '/settings'
   const isSkillsActive = pathname === '/skills'
   const isMcpActive = pathname === '/mcp'
@@ -1017,33 +1014,6 @@ function ChatSidebarComponent({
         </motion.div>
       </div>
 
-      {/* ── New Session button ──────────────────────────────────────── */}
-      {!isVisuallyCollapsed && (
-        <div className="px-2 pb-1">
-          <Link
-            to="/chat/$sessionKey"
-            params={{ sessionKey: 'new' }}
-            onClick={() => {
-              onSelectSession?.()
-            }}
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'w-full justify-start gap-2.5 px-3 py-2 text-primary-900 hover:bg-primary-200 dark:hover:bg-primary-800',
-              isNewSessionActive &&
-                'bg-accent-500/10 text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-900/300/15',
-            )}
-            data-tour="new-session"
-          >
-            <HugeiconsIcon
-              icon={PencilEdit02Icon}
-              size={20}
-              strokeWidth={1.5}
-              className="size-5 shrink-0"
-            />
-            <span>New Session</span>
-          </Link>
-        </div>
-      )}
 
       {/* ── Scrollable body: nav + sessions ─────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin flex flex-col">

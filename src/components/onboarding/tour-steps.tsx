@@ -36,15 +36,7 @@ export const tourSteps: Array<Step> = [
     content:
       'Navigate between all your tools here. Collapse/expand sections to customize your workspace.',
   },
-  // Step 3: New Session
-  {
-    target: '[data-tour="new-session"]',
-    placement: 'right',
-    title: 'Start a New Chat',
-    content:
-      'Click here to start a new AI chat session. Each conversation is saved automatically.',
-  },
-  // Step 4: Dashboard
+  // Step 3: Dashboard
   {
     target: '[data-tour="dashboard"]',
     placement: 'right',

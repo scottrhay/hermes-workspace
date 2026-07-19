@@ -27,6 +27,7 @@ import {
   shouldBlockZeroForkModelSwitch,
 } from './chat-composer-model-switch'
 import { dedupeTransferredFiles } from './attachment-transfer'
+import { getComposerPrimaryAction } from './chat-busy-state'
 import { ContextBar } from './context-bar'
 import type { CSSProperties, Ref } from 'react'
 
@@ -63,7 +64,6 @@ import {
 } from '@/hooks/use-search-modal'
 import { setLocalModelOverride } from '@/screens/chat/local-model-override'
 import { formatModelName } from '@/lib/format-model-name'
-import { getComposerPrimaryAction } from './chat-busy-state'
 
 type ChatComposerAttachment = {
   id: string
@@ -1708,9 +1708,7 @@ function ChatComposerComponent({
     busy: isLoading,
     hasDraft: hasDraft || attachmentProcessingCount > 0,
   })
-  const promptPlaceholder = isMobileViewport
-    ? 'Message...'
-    : 'Ask anything... (↵ to send · ⇧↵ new line · ⌘⇧M switch model)'
+  const promptPlaceholder = 'Ask anything...'
   const [serverCommands, setServerCommands] = useState<Array<SlashCommandDefinition>>([])
 
   useEffect(() => {

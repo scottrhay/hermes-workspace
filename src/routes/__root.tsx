@@ -112,6 +112,27 @@ const themeColorScript = `
 })()
 `
 
+const preloadRecoveryScript = `
+(function () {
+  var key = 'hermes-stale-runtime-recovery-at';
+  var ttlMs = 30000;
+
+  window.addEventListener('vite:preloadError', function (event) {
+    var now = Date.now();
+    try {
+      var previous = Number(sessionStorage.getItem(key) || '0');
+      if (Number.isFinite(previous) && now - previous < ttlMs) return;
+      sessionStorage.setItem(key, String(now));
+    } catch (_) {
+      return;
+    }
+
+    event.preventDefault();
+    window.location.reload();
+  });
+})();
+`
+
 const DEFAULT_SPLASH_HTML = `
 <img src="/aia-mission-control-logo.webp" alt="AIA Copilot" style="width:112px;height:112px;margin-bottom:22px;border-radius:22px;filter:drop-shadow(0 8px 32px color-mix(in srgb,#2557B7 55%, transparent))" />
 <div style="font:700 28px/1.1 system-ui,-apple-system,sans-serif;letter-spacing:-0.02em;color:#F8F1E3">AIA Copilot</div>
@@ -440,6 +461,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         />
         <script
           dangerouslySetInnerHTML={{ __html: wrapInlineScript(themeScript) }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: wrapInlineScript(preloadRecoveryScript),
+          }}
         />
         <HeadContent />
         <script

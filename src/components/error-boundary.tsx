@@ -38,22 +38,47 @@ export function isRecoverableStaleRuntimeError(error: unknown): boolean {
   return isReactDomMismatch || isStaleBuildAsset
 }
 
+function claimRuntimeRecovery(
+  storage: RecoveryStorage,
+  now = Date.now(),
+): boolean {
+  try {
+    const previous = Number(
+      storage.getItem(STALE_RUNTIME_RECOVERY_KEY) ?? '0',
+    )
+    const alreadyRetried = Number.isFinite(previous)
+      ? now - previous < STALE_RUNTIME_RECOVERY_TTL_MS
+      : false
+    if (alreadyRetried) return false
+
+    storage.setItem(STALE_RUNTIME_RECOVERY_KEY, String(now))
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function claimStaleRuntimeRecovery(
   error: unknown,
   storage: RecoveryStorage,
   now = Date.now(),
 ): boolean {
-  if (!isRecoverableStaleRuntimeError(error)) return false
-
-  const previous = Number(
-    storage.getItem(STALE_RUNTIME_RECOVERY_KEY) ?? '0',
+  return (
+    isRecoverableStaleRuntimeError(error) &&
+    claimRuntimeRecovery(storage, now)
   )
-  const alreadyRetried = Number.isFinite(previous)
-    ? now - previous < STALE_RUNTIME_RECOVERY_TTL_MS
-    : false
-  if (alreadyRetried) return false
+}
 
-  storage.setItem(STALE_RUNTIME_RECOVERY_KEY, String(now))
+export function handleVitePreloadError(
+  event: Pick<Event, 'preventDefault'>,
+  storage: RecoveryStorage,
+  reload: () => void,
+  now = Date.now(),
+): boolean {
+  if (!claimRuntimeRecovery(storage, now)) return false
+
+  event.preventDefault()
+  reload()
   return true
 }
 

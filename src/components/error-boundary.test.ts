@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   claimStaleRuntimeRecovery,
+  handleVitePreloadError,
   isRecoverableStaleRuntimeError,
 } from './error-boundary'
 
@@ -50,5 +51,40 @@ describe('stale runtime recovery', () => {
     expect(claimStaleRuntimeRecovery(error, storage, 100_000)).toBe(true)
     expect(claimStaleRuntimeRecovery(error, storage, 110_000)).toBe(false)
     expect(claimStaleRuntimeRecovery(error, storage, 131_000)).toBe(true)
+  })
+
+  it('prevents the first Vite preload failure and reloads once', () => {
+    const storage = new MemoryStorage()
+    let prevented = 0
+    let reloaded = 0
+    const event = { preventDefault: () => prevented++ }
+
+    expect(
+      handleVitePreloadError(event, storage, () => reloaded++, 100_000),
+    ).toBe(true)
+    expect(
+      handleVitePreloadError(event, storage, () => reloaded++, 110_000),
+    ).toBe(false)
+    expect({ prevented, reloaded }).toEqual({ prevented: 1, reloaded: 1 })
+  })
+
+  it('does not prevent or reload when the loop guard cannot be stored', () => {
+    const storage = {
+      getItem: () => {
+        throw new Error('storage blocked')
+      },
+      setItem: () => undefined,
+    }
+    let prevented = false
+    let reloaded = false
+
+    expect(
+      handleVitePreloadError(
+        { preventDefault: () => (prevented = true) },
+        storage,
+        () => (reloaded = true),
+      ),
+    ).toBe(false)
+    expect({ prevented, reloaded }).toEqual({ prevented: false, reloaded: false })
   })
 })
