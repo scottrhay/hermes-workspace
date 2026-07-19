@@ -26,6 +26,7 @@ import {
   getZeroForkModelInfoFlags,
   shouldBlockZeroForkModelSwitch,
 } from './chat-composer-model-switch'
+import { dedupeTransferredFiles } from './attachment-transfer'
 import { ContextBar } from './context-bar'
 import type { CSSProperties, Ref } from 'react'
 
@@ -507,13 +508,9 @@ function hasAttachableData(dt: DataTransfer | null): boolean {
 function collectFilesFromDataTransfer(dt: DataTransfer | null): Array<File> {
   if (!dt) return []
   const files: Array<File> = []
-  const seen = new Set<string>()
 
   const pushFile = (file: File | null) => {
     if (!file) return
-    const key = `${file.name}:${file.size}:${file.lastModified}:${file.type}`
-    if (seen.has(key)) return
-    seen.add(key)
     files.push(file)
   }
 
@@ -526,7 +523,7 @@ function collectFilesFromDataTransfer(dt: DataTransfer | null): Array<File> {
     pushFile(file)
   }
 
-  return files
+  return dedupeTransferredFiles(files)
 }
 
 async function readFileAsDataUrl(file: File): Promise<string | null> {
@@ -2189,6 +2186,20 @@ function ChatComposerComponent({
           commands={slashCommands}
           onSelect={handleSelectSlashCommand}
         />
+
+        {isLoading ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-2 px-4 pt-2 text-xs font-medium text-accent-500"
+          >
+            <span
+              className="size-2 animate-pulse rounded-full bg-accent-500"
+              aria-hidden="true"
+            />
+            AIA Copilot is responding…
+          </div>
+        ) : null}
 
         {isDraggingOver ? (
           <div className="pointer-events-none absolute inset-1 z-20 flex items-center justify-center rounded-[18px] border-2 border-dashed border-primary-400 bg-primary-50/90 text-sm font-medium text-primary-700">

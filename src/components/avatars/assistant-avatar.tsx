@@ -6,14 +6,12 @@ type AvatarProps = {
   className?: string
 }
 
-/**
- * Assistant avatar — Hermes Agent caduceus on Nous blue.
- */
+/** Assistant avatar — AIA Copilot lion. */
 function AssistantAvatarComponent({ size = 28, className }: AvatarProps) {
   return (
     <img
-      src="/claude-avatar.webp"
-      alt="Hermes Agent"
+      src="/aia-lion-avatar.webp"
+      alt="AIA Copilot"
       className={cn('shrink-0', className)}
       style={{
         width: size,

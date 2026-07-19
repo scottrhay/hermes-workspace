@@ -142,8 +142,8 @@ function AgentAvatar({
             </span>
           ) : (
             <img
-              src="/claude-avatar.webp"
-              alt="Hermes Agent"
+              src="/aia-lion-avatar.webp"
+              alt="AIA Copilot"
               className={cn(
                 getLogoSizeClassName(size),
                 iconClassName,
