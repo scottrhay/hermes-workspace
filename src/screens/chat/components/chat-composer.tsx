@@ -63,6 +63,7 @@ import {
 } from '@/hooks/use-search-modal'
 import { setLocalModelOverride } from '@/screens/chat/local-model-override'
 import { formatModelName } from '@/lib/format-model-name'
+import { getComposerPrimaryAction } from './chat-busy-state'
 
 type ChatComposerAttachment = {
   id: string
@@ -1703,6 +1704,10 @@ function ChatComposerComponent({
       attachmentProcessingCount === 0)
 
   const hasDraft = value.trim().length > 0 || attachments.length > 0
+  const primaryAction = getComposerPrimaryAction({
+    busy: isLoading,
+    hasDraft: hasDraft || attachmentProcessingCount > 0,
+  })
   const promptPlaceholder = isMobileViewport
     ? 'Message...'
     : 'Ask anything... (↵ to send · ⇧↵ new line · ⌘⇧M switch model)'
@@ -2197,7 +2202,7 @@ function ChatComposerComponent({
               className="size-2 animate-pulse rounded-full bg-accent-500"
               aria-hidden="true"
             />
-            AIA Copilot is responding…
+            You can send a follow-up while Ariel is busy.
           </div>
         ) : null}
 
@@ -2320,7 +2325,7 @@ function ChatComposerComponent({
 
               {/* Right side: stop / send / mic */}
               <div className="shrink-0">
-                {isLoading ? (
+                {primaryAction === 'stop' ? (
                   <button
                     type="button"
                     onClick={handleAbort}
@@ -3132,7 +3137,7 @@ function ChatComposerComponent({
                     </Button>
                   </PromptInputAction>
                 ) : null}
-                {isLoading ? (
+                {primaryAction === 'stop' ? (
                   <PromptInputAction tooltip="Stop generation">
                     <Button
                       onClick={handleAbort}

@@ -11,6 +11,7 @@ import {
   textFromMessage,
 } from '../utils'
 import { MessageItem } from './message-item'
+import { getAssistantWaitLabel } from './chat-busy-state'
 import { TuiActivityCard } from './tui-activity-card'
 import { ScrollToBottomButton } from './scroll-to-bottom-button'
 import { ResearchCard } from './research-card'
@@ -183,6 +184,8 @@ type ThinkingBubbleProps = {
   /** When true, always show "Thinking…" regardless of activity. Used for the
    * first 10s before the delayed activity feed appears. */
   forceSimple?: boolean
+  /** True only after streaming/tool/lifecycle activity has actually started. */
+  hasConfirmedActivity?: boolean
 }
 
 /**
@@ -196,6 +199,7 @@ function ThinkingBubble({
   researchCard,
   isCompacting = false,
   forceSimple = false,
+  hasConfirmedActivity = false,
 }: ThinkingBubbleProps) {
   // Fallback activity from heartbeat — shows last known agent activity
   // when no tool calls are in flight (e.g. during pure reasoning)
@@ -214,8 +218,10 @@ function ThinkingBubble({
   const statusLabel = isCompacting
     ? 'Ariel is organizing context…'
     : forceSimple
-      ? 'Ariel is working…'
-      : activityLabel || heartbeatActivity || 'Ariel is working…'
+      ? getAssistantWaitLabel({ active: hasConfirmedActivity })
+      : activityLabel ||
+        (hasConfirmedActivity ? heartbeatActivity : null) ||
+        getAssistantWaitLabel({ active: hasConfirmedActivity })
 
   // Elapsed time counter — counts from bubble mount, not from last label change
   const [elapsed, setElapsed] = useState(0)
@@ -1930,6 +1936,18 @@ function ChatMessageListComponent({
                   researchCard={researchCard}
                   isCompacting={isCompacting}
                   forceSimple={!showActivityFeed}
+                  hasConfirmedActivity={
+                    isCompacting ||
+                    isStreaming ||
+                    activeToolCalls.some(
+                      (toolCall) =>
+                        toolCall.phase !== 'done' &&
+                        toolCall.phase !== 'complete' &&
+                        toolCall.phase !== 'completed',
+                    ) ||
+                    liveToolActivity.length > 0 ||
+                    lifecycleEvents.length > 0
+                  }
                 />
                 {/* After 10s of thinking, show activity feed. With tool calls:
                     compact CLI-style TuiActivityCard (last 3). Without tool calls:

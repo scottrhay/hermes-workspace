@@ -46,18 +46,19 @@ describe('AIA chat experience', () => {
     ])
   })
 
-  it('shows an explicit response-in-progress status in the composer', async () => {
+  it('makes clear that follow-ups remain available while the conversation is active', async () => {
     const composer = await readFile(composerUrl, 'utf8')
 
-    expect(composer).toContain('AIA Copilot is responding')
+    expect(composer).toContain('You can send a follow-up while Ariel is busy')
     expect(composer).toContain('role="status"')
     expect(composer).toContain('aria-live="polite"')
   })
 
-  it('shows Ariel working beside the assistant avatar before reply text arrives', async () => {
+  it('shows truthful Ariel status beside the assistant avatar before reply text arrives', async () => {
     const messageList = await readFile(messageListUrl, 'utf8')
 
-    expect(messageList).toContain('Ariel is working…')
+    expect(messageList).toContain('getAssistantWaitLabel')
+    expect(messageList).toContain('hasConfirmedActivity')
     expect(messageList).toContain('<AssistantAvatar size={28} />')
     expect(messageList).toContain('thinking-dot thinking-dot-1')
     expect(messageList).toContain('aria-live="polite"')
