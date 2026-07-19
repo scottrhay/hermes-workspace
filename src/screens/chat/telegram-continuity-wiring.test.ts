@@ -22,6 +22,7 @@ describe('Telegram browser-send continuity wiring', () => {
 
   it('authorizes, serializes, and forwards the stable key only from the trusted server route', () => {
     const route = source('src/routes/api/send-stream.ts')
+    const hook = source('src/screens/chat/hooks/use-streaming-message.ts')
 
     expect(route).toContain('resolveAuthorizedTelegramWorkstream')
     expect(route).toContain('isAuthorizedTelegramSessionPair')
@@ -30,7 +31,11 @@ describe('Telegram browser-send continuity wiring', () => {
     expect(route).toContain('status: 409')
     expect(route).toContain('status: 503')
     expect(route).toContain('currentWorkstream.sessionId')
+    expect(route).toContain('steerSession(sessionKey, scopedMessage, gatewaySessionKey)')
+    expect(route).toContain('event: handoff')
     expect(route).toContain('gatewaySessionKey,')
+    expect(hook).toContain("case 'handoff'")
+    expect(hook).toContain('transitionToHandoff()')
   })
 
   it('uses one cleanup path that releases the Telegram lock and hides upstream diagnostics', () => {

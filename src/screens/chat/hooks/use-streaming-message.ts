@@ -722,6 +722,10 @@ export function useStreamingMessage(options: UseStreamingMessageOptions = {}) {
           stepUsageRef.current = nextUsage
           break
         }
+        case 'handoff': {
+          transitionToHandoff()
+          break
+        }
         case 'done': {
           const doneState = (payload as { state?: string }).state
           const errorMessage = (payload as { errorMessage?: string })

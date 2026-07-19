@@ -28,7 +28,6 @@ import { createTelegramStreamTerminalHandlers } from '../../server/telegram-stre
 import {
   getTelegramOwnerUserId,
   isAuthorizedTelegramSessionPair,
-  isTelegramWorkstreamActive,
   publicTelegramStreamFailure,
   publicTelegramToolEvent,
   publicTelegramToolFailure,
@@ -36,12 +35,14 @@ import {
 } from '../../server/telegram-workstreams'
 import {
   SESSIONS_API_UNAVAILABLE_MESSAGE,
+  SessionSteerError,
   createSession,
   ensureGatewayProbed,
   getGatewayCapabilities,
   getSession,
   getMessages as getSessionMessagesFromAgent,
   listSessions,
+  steerSession,
   streamChat,
 } from '../../server/claude-api'
 import { loadWorkspaceCatalog } from './workspace'
@@ -447,25 +448,6 @@ export const Route = createFileRoute('/api/send-stream')({
               },
             )
           }
-          if (
-            isTelegramWorkstreamActive(
-              telegramSessions,
-              gatewaySessionKey,
-              telegramOwnerUserId,
-            )
-          ) {
-            return new Response(
-              JSON.stringify({
-                ok: false,
-                error:
-                  'This Telegram workstream is active on another surface. Wait for that response to finish, then retry.',
-              }),
-              {
-                status: 409,
-                headers: { 'Content-Type': 'application/json' },
-              },
-            )
-          }
           currentRawSessionKey = currentWorkstream.sessionId
         }
 
@@ -525,6 +507,53 @@ export const Route = createFileRoute('/api/send-stream')({
           getChatMessage(message, attachments),
           workspaceScope,
         )
+
+        if (gatewaySessionKey) {
+          try {
+            await steerSession(sessionKey, scopedMessage, gatewaySessionKey)
+            const headers = buildResolvedSessionHeaders({
+              sessionKey,
+              friendlyId: resolvedFriendlyId,
+            })
+            return new Response(
+              `event: handoff\ndata: ${JSON.stringify({
+                sessionKey,
+                friendlyId: resolvedFriendlyId,
+                status: 'steered',
+              })}\n\n`,
+              {
+                status: 200,
+                headers: {
+                  ...headers,
+                  'Content-Type': 'text/event-stream',
+                  'Cache-Control': 'no-cache',
+                },
+              },
+            )
+          } catch (error) {
+            // Hermes is the atomic source of truth for whether this exact
+            // session key has a live run. Only its typed session_not_active
+            // refusal may fall through to starting an ordinary new turn.
+            if (
+              !(error instanceof SessionSteerError) ||
+              error.status !== 409 ||
+              error.code !== 'session_not_active'
+            ) {
+              console.error('[send-stream] Active Telegram steer failed', error)
+              return new Response(
+                JSON.stringify({
+                  ok: false,
+                  error:
+                    'The active Telegram workstream could not accept this message. Retry shortly.',
+                }),
+                {
+                  status: 503,
+                  headers: { 'Content-Type': 'application/json' },
+                },
+              )
+            }
+          }
+        }
 
         let releaseTelegramSendLock: (() => void) | null = null
         if (gatewaySessionKey) {

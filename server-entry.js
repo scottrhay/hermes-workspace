@@ -2,11 +2,21 @@ import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { join, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import server from './dist/server/server.js'
+import { loadHermesApiToken } from './server-hermes-auth.js'
 import {
   isRemoteAddressAllowed,
   parseAllowedRemoteIps,
 } from './server-remote-access.js'
+
+const hermesAuth = await loadHermesApiToken()
+if (hermesAuth.token && hermesAuth.source === 'hermes-config') {
+  process.env.HERMES_API_TOKEN = hermesAuth.token
+  console.log('[workspace] using authenticated Hermes API server connection')
+}
+
+// Load the built server only after authentication discovery because its gateway
+// client snapshots HERMES_API_TOKEN during module initialization.
+const { default: server } = await import('./dist/server/server.js')
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const CLIENT_DIR = join(__dirname, 'dist', 'client')

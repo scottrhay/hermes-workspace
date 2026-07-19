@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   getTelegramOwnerUserId,
   isAuthorizedTelegramSessionPair,
-  isTelegramWorkstreamActive,
   normalizeTelegramWorkstreams,
   publicTelegramStreamFailure,
   publicTelegramToolEvent,
@@ -335,30 +334,4 @@ describe('normalizeTelegramWorkstreams', () => {
     expect(result[0].sessionId).toBe('session-b')
   })
 
-  it('detects activity only on the newest concrete session for a workstream', () => {
-    const rows = [
-      {
-        id: 'older',
-        source: 'telegram',
-        user_id: SCOTT_ID,
-        session_key: 'shared-key',
-        thread_id: '2246',
-        started_at: 100,
-        is_active: true,
-      },
-      {
-        id: 'newer',
-        source: 'telegram',
-        user_id: SCOTT_ID,
-        session_key: 'shared-key',
-        thread_id: '2246',
-        started_at: 200,
-        is_active: false,
-      },
-    ]
-
-    expect(isTelegramWorkstreamActive(rows, 'shared-key', SCOTT_ID)).toBe(false)
-    rows[1].is_active = true
-    expect(isTelegramWorkstreamActive(rows, 'shared-key', SCOTT_ID)).toBe(true)
-  })
 })

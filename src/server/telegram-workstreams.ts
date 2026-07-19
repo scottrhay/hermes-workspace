@@ -201,21 +201,3 @@ export function publicTelegramToolEvent<
     result: publicTelegramToolFailure(gatewaySessionKey, event.result ?? ''),
   }
 }
-
-export function isTelegramWorkstreamActive(
-  rows: Array<TelegramSessionRow>,
-  sessionKey: string,
-  ownerUserId: string,
-): boolean {
-  const currentWorkstream = resolveAuthorizedTelegramWorkstream(
-    rows,
-    sessionKey,
-    ownerUserId,
-  )
-  if (!currentWorkstream) return false
-  return rows.some(
-    (row) =>
-      cleanString(row.id) === currentWorkstream.sessionId &&
-      row.is_active === true,
-  )
-}
