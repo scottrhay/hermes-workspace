@@ -59,6 +59,7 @@ describe('AIA chat experience', () => {
 
     expect(composer).toContain("const promptPlaceholder = 'Ask anything...'")
     expect(composer).not.toContain('⌘⇧M switch model')
+    expect(composer).not.toContain('New Session')
   })
 
   it('shows truthful Ariel status beside the assistant avatar before reply text arrives', async () => {

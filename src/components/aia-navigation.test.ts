@@ -20,6 +20,15 @@ describe('AIA navigation', () => {
     expect(source).toContain('Mission Control')
     expect(source).not.toContain('<span>New Session</span>')
     expect(source).not.toContain('Hermes Workspace\n                </span>')
+
+    const operatorTips = readFileSync(
+      resolve(
+        process.cwd(),
+        'src/screens/dashboard/components/operator-tip-card.tsx',
+      ),
+      'utf8',
+    )
+    expect(operatorTips).not.toContain("href: '/chat/new'")
   })
 
   for (const relPath of NAVIGATION_FILES) {

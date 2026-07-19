@@ -179,15 +179,6 @@ const TIPS: ReadonlyArray<Tip> = [
     href: '/skills',
     score: () => 4,
   },
-  {
-    id: 'new-chat',
-    title: "Pick the right model up-front",
-    body: "Hitting New Chat without a model in mind is fine, but Hermes routes faster when you set a default in Settings → Models for your common task types.",
-    tone: 'info',
-    cta: 'New chat',
-    href: '/chat/new',
-    score: () => 3,
-  },
 ]
 
 const TONE_COLORS: Record<NonNullable<Tip['tone']>, string> = {
@@ -225,7 +216,6 @@ export function OperatorTipCard({
     const n = Number(raw)
     if (Number.isFinite(n) && n >= 0) setIndex(n % Math.max(1, ranked.length))
     // Only restore on first mount; tip rotation thereafter is manual.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -242,10 +232,6 @@ export function OperatorTipCard({
     if (!tip.href) return
     if (tip.href.startsWith('http')) {
       window.open(tip.href, '_blank', 'noopener,noreferrer')
-      return
-    }
-    if (tip.href === '/chat/new') {
-      navigate({ to: '/chat/$sessionKey', params: { sessionKey: 'new' } })
       return
     }
     navigate({ to: tip.href as never })

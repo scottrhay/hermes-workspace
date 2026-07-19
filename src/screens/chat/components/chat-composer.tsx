@@ -90,7 +90,6 @@ type ChatComposerProps = {
   wrapperRef?: Ref<HTMLDivElement>
   composerRef?: Ref<ChatComposerHandle>
   focusKey?: string
-  onNewSession?: () => void
   onToggleWebSearch?: (enabled: boolean) => void
   webSearchEnabled?: boolean
   /** Current thinking level for this session */
@@ -872,7 +871,6 @@ function ChatComposerComponent({
   wrapperRef,
   composerRef,
   focusKey,
-  onNewSession,
   onToggleWebSearch: _onToggleWebSearch,
   webSearchEnabled,
   thinkingLevel: externalThinkingLevel,
@@ -2498,28 +2496,6 @@ function ChatComposerComponent({
                             </span>
                             <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
                               Clear Draft
-                            </span>
-                          </button>
-                        ) : null}
-
-                        {onNewSession ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onNewSession()
-                              setIsMobileActionsMenuOpen(false)
-                            }}
-                            className="rounded-xl border border-neutral-100 bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 p-3 flex flex-col items-start gap-2 text-left"
-                          >
-                            <span className="rounded-lg bg-green-100 dark:bg-green-900/30 p-1.5 text-green-600 dark:text-green-400">
-                              <HugeiconsIcon
-                                icon={Add01Icon}
-                                size={24}
-                                strokeWidth={1.5}
-                              />
-                            </span>
-                            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
-                              New Session
                             </span>
                           </button>
                         ) : null}
