@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  getAssistantDetailLabel,
   getAssistantWaitLabel,
   getComposerPrimaryAction,
   hasConfirmedAssistantActivity,
@@ -45,5 +46,17 @@ describe('chat busy state', () => {
         lifecycleEventCount: 1,
       }),
     ).toBe(true)
+  })
+
+  it('keeps the detail line truthful while the turn is only waiting', () => {
+    expect(
+      getAssistantDetailLabel({ active: false, heartbeat: 'Working…' }),
+    ).toBe('Waiting…')
+  })
+
+  it('uses heartbeat detail only after activity is confirmed', () => {
+    expect(
+      getAssistantDetailLabel({ active: true, heartbeat: 'Using browser' }),
+    ).toBe('Using browser')
   })
 })

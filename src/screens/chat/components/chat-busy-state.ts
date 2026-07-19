@@ -18,16 +18,28 @@ export function getAssistantWaitLabel({
   return active ? 'Ariel is working…' : 'Waiting for Ariel…'
 }
 
+export function getAssistantDetailLabel({
+  active,
+  heartbeat,
+}: {
+  active: boolean
+  heartbeat: string
+}): string {
+  return active ? heartbeat || 'Working…' : 'Waiting…'
+}
+
 export function hasConfirmedAssistantActivity({
   transportStreaming,
   isCompacting,
   hasRunningTool,
+  hasStreamingThinking = false,
   liveToolActivityCount,
   lifecycleEventCount,
 }: {
   transportStreaming: boolean
   isCompacting: boolean
   hasRunningTool: boolean
+  hasStreamingThinking?: boolean
   liveToolActivityCount: number
   lifecycleEventCount: number
 }): boolean {
@@ -37,6 +49,7 @@ export function hasConfirmedAssistantActivity({
   return (
     isCompacting ||
     hasRunningTool ||
+    hasStreamingThinking ||
     liveToolActivityCount > 0 ||
     lifecycleEventCount > 0
   )

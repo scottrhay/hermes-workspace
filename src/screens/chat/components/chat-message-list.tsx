@@ -12,6 +12,7 @@ import {
 } from '../utils'
 import { MessageItem } from './message-item'
 import {
+  getAssistantDetailLabel,
   getAssistantWaitLabel,
   hasConfirmedAssistantActivity,
 } from './chat-busy-state'
@@ -382,9 +383,13 @@ function ThinkingBubble({
   )
 }
 
-/** Minimal status line shown after 10s of thinking when no tool calls
- *  are in flight yet. Shows heartbeat status + elapsed time. */
-function StatusLine() {
+/** Minimal status line shown after 10s of waiting or thinking when no tool calls
+ *  are in flight yet. Shows truthful lifecycle detail + elapsed time. */
+function StatusLine({
+  hasConfirmedActivity,
+}: {
+  hasConfirmedActivity: boolean
+}) {
   const heartbeatActivity = useChatStore((s) => s.heartbeatActivity)
   const [elapsed, setElapsed] = useState(0)
   useEffect(() => {
@@ -401,7 +406,10 @@ function StatusLine() {
     <div className="flex items-center gap-2 text-[11px] text-primary-400 dark:text-primary-500 py-0.5">
       <span className="inline-block size-1.5 rounded-full bg-amber-400 animate-pulse" />
       <span className="opacity-80">
-        {heartbeatActivity || 'Working…'}
+        {getAssistantDetailLabel({
+          active: hasConfirmedActivity,
+          heartbeat: heartbeatActivity,
+        })}
       </span>
       <span aria-hidden="true" className="opacity-40">·</span>
       <span className="tabular-nums opacity-50 font-mono">{elapsedLabel}</span>
@@ -1171,6 +1179,21 @@ function ChatMessageListComponent({
     }
     return true
   })()
+  const confirmedAssistantActivity = hasConfirmedAssistantActivity({
+    transportStreaming: isStreaming,
+    isCompacting,
+    hasRunningTool: activeToolCalls.some(
+      (toolCall) =>
+        toolCall.phase !== 'done' &&
+        toolCall.phase !== 'complete' &&
+        toolCall.phase !== 'completed',
+    ),
+    hasStreamingThinking: Boolean(
+      streamingThinking && streamingThinking.trim().length > 0,
+    ),
+    liveToolActivityCount: liveToolActivity.length,
+    lifecycleEventCount: lifecycleEvents.length,
+  })
 
   const showResearchCard = Boolean(
     researchCard && researchCard.steps.length > 0,
@@ -1939,18 +1962,7 @@ function ChatMessageListComponent({
                   researchCard={researchCard}
                   isCompacting={isCompacting}
                   forceSimple={!showActivityFeed}
-                  hasConfirmedActivity={hasConfirmedAssistantActivity({
-                    transportStreaming: isStreaming,
-                    isCompacting,
-                    hasRunningTool: activeToolCalls.some(
-                      (toolCall) =>
-                        toolCall.phase !== 'done' &&
-                        toolCall.phase !== 'complete' &&
-                        toolCall.phase !== 'completed',
-                    ),
-                    liveToolActivityCount: liveToolActivity.length,
-                    lifecycleEventCount: lifecycleEvents.length,
-                  })}
+                  hasConfirmedActivity={confirmedAssistantActivity}
                 />
                 {/* After 10s of thinking, show activity feed. With tool calls:
                     compact CLI-style TuiActivityCard (last 3). Without tool calls:
@@ -2013,7 +2025,9 @@ function ChatMessageListComponent({
                           }}
                         />
                       ) : (
-                        <StatusLine />
+                        <StatusLine
+                          hasConfirmedActivity={confirmedAssistantActivity}
+                        />
                       )}
                     </div>
                   </div>
