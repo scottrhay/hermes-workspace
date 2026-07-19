@@ -3,6 +3,10 @@ import { readFile, stat } from 'node:fs/promises'
 import { join, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import server from './dist/server/server.js'
+import {
+  isRemoteAddressAllowed,
+  parseAllowedRemoteIps,
+} from './server-remote-access.js'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const CLIENT_DIR = join(__dirname, 'dist', 'client')
@@ -41,9 +45,12 @@ const ALWAYS_HEADERS = {
 
 const port = parseInt(process.env.PORT || '3000', 10)
 // Default HOST to localhost-only. Operators who want the workspace reachable
-// on a LAN / Tailscale / public surface must opt in explicitly with
-// HOST=0.0.0.0 *and* set CLAUDE_PASSWORD (enforced below). See #122.
+// on a LAN / Tailscale / public surface must opt in explicitly and provide
+// either authentication or an exact remote-IP allow-list. See #122.
 const host = process.env.HOST || '127.0.0.1'
+const allowedRemoteIps = parseAllowedRemoteIps(
+  process.env.HERMES_ALLOWED_REMOTE_IPS || process.env.HERMES_ALLOWED_REMOTE_IP,
+)
 
 function isNonLoopbackHost(h) {
   if (!h) return false
@@ -63,16 +70,6 @@ if (isNonLoopbackHost(host)) {
     ''
   ).trim()
   if (!password) {
-    console.error(
-      '\n[workspace] refusing to start.\n' +
-        `  HOST is set to "${host}" (non-loopback), but HERMES_PASSWORD is unset.\n` +
-        '  This would expose a high-privilege control plane (terminals, files, agents)\n' +
-        '  to anyone who can reach the port. Either:\n' +
-        '    • set HOST=127.0.0.1 for local-only access, or\n' +
-        '    • set HERMES_PASSWORD=<strong-secret> to enable workspace auth, or\n' +
-        '    • set HERMES_ALLOW_INSECURE_REMOTE=1 to bypass this check (not recommended).\n' +
-        '  See #122 for context.\n',
-    )
     const allowInsecure = (
       process.env.HERMES_ALLOW_INSECURE_REMOTE ||
       process.env.CLAUDE_ALLOW_INSECURE_REMOTE ||
@@ -80,16 +77,30 @@ if (isNonLoopbackHost(host)) {
     )
       .trim()
       .toLowerCase()
-    if (
-      allowInsecure !== '1' &&
-      allowInsecure !== 'true' &&
-      allowInsecure !== 'yes'
-    ) {
+    const insecureOverride = ['1', 'true', 'yes'].includes(allowInsecure)
+    if (allowedRemoteIps.length === 0 && !insecureOverride) {
+      console.error(
+        '\n[workspace] refusing to start.\n' +
+          `  HOST is set to "${host}" (non-loopback), but HERMES_PASSWORD is unset.\n` +
+          '  This would expose a high-privilege control plane (terminals, files, agents)\n' +
+          '  to anyone who can reach the port. Either:\n' +
+          '    • set HOST=127.0.0.1 for local-only access, or\n' +
+          '    • set HERMES_PASSWORD=<strong-secret> to enable workspace auth, or\n' +
+          '    • set HERMES_ALLOWED_REMOTE_IP=<single trusted client IP>, or\n' +
+          '    • set HERMES_ALLOW_INSECURE_REMOTE=1 to bypass this check (not recommended).\n' +
+          '  See #122 for context.\n',
+      )
       process.exit(1)
     }
-    console.warn(
-      '[workspace] HERMES_ALLOW_INSECURE_REMOTE is set — starting anyway.',
-    )
+    if (allowedRemoteIps.length > 0) {
+      console.warn(
+        `[workspace] remote access restricted to: ${allowedRemoteIps.join(', ')}`,
+      )
+    } else {
+      console.warn(
+        '[workspace] HERMES_ALLOW_INSECURE_REMOTE is set — starting anyway.',
+      )
+    }
   }
 
   // Warn when serving over plain HTTP with a password: NODE_ENV=production
@@ -199,6 +210,19 @@ async function tryServeStatic(req, res) {
 }
 
 async function requestHandler(req, res) {
+  if (
+    allowedRemoteIps.length > 0 &&
+    !isRemoteAddressAllowed(req.socket.remoteAddress, allowedRemoteIps)
+  ) {
+    res.writeHead(403, {
+      ...ALWAYS_HEADERS,
+      'Cache-Control': 'no-store',
+      'Content-Type': 'text/plain; charset=utf-8',
+    })
+    res.end('Forbidden')
+    return
+  }
+
   // Try static files first (client assets)
   if (req.method === 'GET' || req.method === 'HEAD') {
     const served = await tryServeStatic(req, res)
