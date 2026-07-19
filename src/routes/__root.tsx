@@ -109,9 +109,9 @@ const themeColorScript = `
 `
 
 const DEFAULT_SPLASH_HTML = `
-<img src="/claude-avatar.webp" alt="Hermes Agent" style="width:80px;height:80px;margin-bottom:20px;border-radius:16px;filter:drop-shadow(0 8px 32px color-mix(in srgb,#FFAC02 45%, transparent))" />
-<img src="/claude-banner.png" alt="Hermes Workspace" style="width:280px;height:auto;margin-bottom:8px;filter:drop-shadow(0 4px 16px rgba(0,0,0,0.5))" />
-<div style="font:400 14px/1 system-ui,-apple-system,sans-serif;letter-spacing:0.04em;color:#9CB2AE">Workspace</div>
+<img src="/aia-mission-control-logo.webp" alt="AIA Copilot" style="width:112px;height:112px;margin-bottom:22px;border-radius:22px;filter:drop-shadow(0 8px 32px color-mix(in srgb,#2557B7 55%, transparent))" />
+<div style="font:700 28px/1.1 system-ui,-apple-system,sans-serif;letter-spacing:-0.02em;color:#F8F1E3">AIA Copilot</div>
+<div style="margin-top:7px;font:500 16px/1 system-ui,-apple-system,sans-serif;letter-spacing:0.08em;color:#9CB2AE;text-transform:uppercase">Mission Control</div>
 <div style="margin-top:28px;width:140px;height:3px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;position:relative"><div id="splash-bar" style="width:0%;height:100%;background:#FFAC02;border-radius:3px;transition:width 0.4s ease"></div></div>
 `
 
@@ -487,9 +487,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             var quip = quips[Math.floor(Math.random() * quips.length)];
 
             d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+bg+';transition:opacity 0.5s ease;';
-            d.innerHTML = '<img src="/claude-avatar.webp" alt="Hermes Agent" style="width:80px;height:80px;margin-bottom:20px;border-radius:16px;filter:drop-shadow(0 8px 32px color-mix(in srgb,'+accent+' 45%, transparent))" />'
-              + '<img src="'+(isDark ? '/claude-banner.png' : '/claude-banner-light.png')+'" alt="Hermes Workspace" style="width:280px;height:auto;margin-bottom:8px;filter:drop-shadow(0 4px 16px '+(isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.1)')+')" />'
-              + '<div style="font:400 14px/1 system-ui,-apple-system,sans-serif;letter-spacing:0.04em;color:'+muted+'">Workspace</div>'
+            d.innerHTML = '<img src="/aia-mission-control-logo.webp" alt="AIA Copilot" style="width:112px;height:112px;margin-bottom:22px;border-radius:22px;filter:drop-shadow(0 8px 32px color-mix(in srgb,#2557B7 55%, transparent))" />'
+              + '<div style="font:700 28px/1.1 system-ui,-apple-system,sans-serif;letter-spacing:-0.02em;color:'+txt+'">AIA Copilot</div>'
+              + '<div style="margin-top:7px;font:500 16px/1 system-ui,-apple-system,sans-serif;letter-spacing:0.08em;color:'+muted+';text-transform:uppercase">Mission Control</div>'
               + '<div style="margin-top:28px;width:140px;height:3px;background:'+(isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)')+';border-radius:3px;overflow:hidden;position:relative"><div id=splash-bar style="width:0%;height:100%;background:'+accent+';border-radius:3px;transition:width 0.4s ease"></div></div>';
 
             var bar = document.getElementById('splash-bar');
