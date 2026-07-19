@@ -35,15 +35,14 @@ import {
 } from '../../server/telegram-workstreams'
 import {
   SESSIONS_API_UNAVAILABLE_MESSAGE,
-  SessionSteerError,
   createSession,
   ensureGatewayProbed,
   getGatewayCapabilities,
   getSession,
   getMessages as getSessionMessagesFromAgent,
   listSessions,
-  steerSession,
   streamChat,
+  submitSession,
 } from '../../server/claude-api'
 import { loadWorkspaceCatalog } from './workspace'
 import {
@@ -510,7 +509,7 @@ export const Route = createFileRoute('/api/send-stream')({
 
         if (gatewaySessionKey) {
           try {
-            await steerSession(sessionKey, scopedMessage, gatewaySessionKey)
+            await submitSession(sessionKey, scopedMessage, gatewaySessionKey)
             const headers = buildResolvedSessionHeaders({
               sessionKey,
               friendlyId: resolvedFriendlyId,
@@ -519,7 +518,7 @@ export const Route = createFileRoute('/api/send-stream')({
               `event: handoff\ndata: ${JSON.stringify({
                 sessionKey,
                 friendlyId: resolvedFriendlyId,
-                status: 'steered',
+                status: 'accepted',
               })}\n\n`,
               {
                 status: 200,
@@ -531,27 +530,18 @@ export const Route = createFileRoute('/api/send-stream')({
               },
             )
           } catch (error) {
-            // Hermes is the atomic source of truth for whether this exact
-            // session key has a live run. Only its typed session_not_active
-            // refusal may fall through to starting an ordinary new turn.
-            if (
-              !(error instanceof SessionSteerError) ||
-              error.status !== 409 ||
-              error.code !== 'session_not_active'
-            ) {
-              console.error('[send-stream] Active Telegram steer failed', error)
-              return new Response(
-                JSON.stringify({
-                  ok: false,
-                  error:
-                    'The active Telegram workstream could not accept this message. Retry shortly.',
-                }),
-                {
-                  status: 503,
-                  headers: { 'Content-Type': 'application/json' },
-                },
-              )
-            }
+            console.error('[send-stream] Canonical Telegram submit failed', error)
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                error:
+                  'The Telegram workstream could not accept this message. Retry shortly.',
+              }),
+              {
+                status: 503,
+                headers: { 'Content-Type': 'application/json' },
+              },
+            )
           }
         }
 

@@ -554,6 +554,7 @@ export function ChatScreen({
   )
   const { renameSession, renaming: renamingSessionTitle } = useRenameSession()
   const sseConnectionState = useChatStore((s) => s.connectionState)
+  const storeWaiting = useChatStore((s) => s.waitingSessionKeys)
 
   const {
     sessionsQuery,
@@ -567,6 +568,9 @@ export function ChatScreen({
     sessionsFetching: _sessionsFetching,
     refetchSessions: _refetchSessions,
   } = useChatSessions({ activeFriendlyId, isNewChat, forcedSessionKey })
+  const pendingCanonicalHistory = Boolean(
+    activeSessionKey && storeWaiting.has(activeSessionKey),
+  )
   const {
     historyQuery,
     historyMessages,
@@ -584,13 +588,16 @@ export function ChatScreen({
     activeExists,
     sessionsReady: sessionsQuery.isSuccess,
     queryClient,
-    historyRefetchInterval: sseConnectionState === 'connected' ? 30_000 : 5_000,
+    historyRefetchInterval: pendingCanonicalHistory
+      ? 1_000
+      : sseConnectionState === 'connected'
+        ? 30_000
+        : 5_000,
     portableMode: isPortableMode,
   })
 
   // --- Waiting state management (Issue #43 + #449) ---
   // resolvedSessionKey is now available (defined above from useChatHistory).
-  const storeWaiting = useChatStore((s) => s.waitingSessionKeys)
   const sessionKeyForWaiting = useRef<string | undefined>(undefined)
   const pendingVerifySessionKeyRef = useRef<string | undefined>(undefined)
 

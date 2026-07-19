@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { steerSession, streamChat } from './claude-api'
+import { streamChat, submitSession } from './claude-api'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -35,10 +35,10 @@ describe('streamChat Telegram continuity', () => {
   })
 })
 
-describe('steerSession Telegram continuity', () => {
-  it('targets the exact concrete session and stable gateway key', async () => {
+describe('submitSession Telegram continuity', () => {
+  it('targets the exact concrete session and stable canonical gateway lane', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ ok: true, status: 'steered' }), {
+      new Response(JSON.stringify({ ok: true, status: 'accepted' }), {
         status: 202,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -46,15 +46,15 @@ describe('steerSession Telegram continuity', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(
-      steerSession(
+      submitSession(
         'concrete-session-id',
         'authorization code entered in WebUI',
         'agent:main:telegram:group:g1:2246',
       ),
-    ).resolves.toEqual({ ok: true, status: 'steered' })
+    ).resolves.toEqual({ ok: true, status: 'accepted' })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/api/sessions/concrete-session-id/steer'),
+      expect.stringContaining('/api/sessions/concrete-session-id/submit'),
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -65,30 +65,5 @@ describe('steerSession Telegram continuity', () => {
         }),
       }),
     )
-  })
-
-  it('exposes a typed 409 so only the no-active-run race can fall through', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            error: {
-              code: 'session_not_active',
-              message: 'No matching active gateway run',
-            },
-          }),
-          { status: 409 },
-        ),
-      ),
-    )
-
-    await expect(
-      steerSession(
-        'concrete-session-id',
-        'start a normal turn if idle',
-        'agent:main:telegram:group:g1:2246',
-      ),
-    ).rejects.toMatchObject({ status: 409, code: 'session_not_active' })
   })
 })

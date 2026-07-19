@@ -210,24 +210,12 @@ export async function deleteSession(sessionId: string): Promise<void> {
   return claudeDeleteReq(`/api/sessions/${sessionId}`)
 }
 
-export class SessionSteerError extends Error {
-  status: number
-  code?: string
-
-  constructor(status: number, code?: string) {
-    super(`Hermes session steer failed with status ${status}`)
-    this.name = 'SessionSteerError'
-    this.status = status
-    this.code = code
-  }
-}
-
-export async function steerSession(
+export async function submitSession(
   sessionId: string,
   message: string,
   gatewaySessionKey: string,
-): Promise<{ ok: true; status: 'steered' }> {
-  const path = `/api/sessions/${encodeURIComponent(sessionId)}/steer`
+): Promise<{ ok: true; status: 'accepted' }> {
+  const path = `/api/sessions/${encodeURIComponent(sessionId)}/submit`
   const res = await fetch(`${CLAUDE_API}${path}`, {
     method: 'POST',
     headers: {
@@ -238,17 +226,9 @@ export async function steerSession(
     body: JSON.stringify({ message }),
   })
   if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    let code: string | undefined
-    try {
-      const parsed = JSON.parse(text) as { error?: { code?: unknown } }
-      if (typeof parsed.error?.code === 'string') code = parsed.error.code
-    } catch {
-      // Non-JSON upstream errors remain opaque to callers.
-    }
-    throw new SessionSteerError(res.status, code)
+    throw new Error(`Hermes canonical session submit failed with status ${res.status}`)
   }
-  return res.json() as Promise<{ ok: true; status: 'steered' }>
+  return res.json() as Promise<{ ok: true; status: 'accepted' }>
 }
 
 export async function getMessages(

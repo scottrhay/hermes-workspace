@@ -331,11 +331,9 @@ export function useStreamingMessage(options: UseStreamingMessageOptions = {}) {
       ...prev,
       isStreaming: false,
     }))
-    schedulePostAcceptanceTimeout('handoff')
   }, [
     clearHandoffTimer,
     clearSendStreamRun,
-    schedulePostAcceptanceTimeout,
     stopFrame,
   ])
 
