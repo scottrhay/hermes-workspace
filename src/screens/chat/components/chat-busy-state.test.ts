@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getAssistantWaitLabel,
   getComposerPrimaryAction,
+  hasConfirmedAssistantActivity,
 } from './chat-busy-state'
 
 describe('chat busy state', () => {
@@ -20,5 +21,29 @@ describe('chat busy state', () => {
 
   it('labels a turn as working only after activity begins', () => {
     expect(getAssistantWaitLabel({ active: true })).toBe('Ariel is working…')
+  })
+
+  it('does not treat transport startup alone as confirmed assistant activity', () => {
+    expect(
+      hasConfirmedAssistantActivity({
+        transportStreaming: true,
+        isCompacting: false,
+        hasRunningTool: false,
+        liveToolActivityCount: 0,
+        lifecycleEventCount: 0,
+      }),
+    ).toBe(false)
+  })
+
+  it('confirms assistant activity from a real lifecycle event', () => {
+    expect(
+      hasConfirmedAssistantActivity({
+        transportStreaming: false,
+        isCompacting: false,
+        hasRunningTool: false,
+        liveToolActivityCount: 0,
+        lifecycleEventCount: 1,
+      }),
+    ).toBe(true)
   })
 })

@@ -11,7 +11,10 @@ import {
   textFromMessage,
 } from '../utils'
 import { MessageItem } from './message-item'
-import { getAssistantWaitLabel } from './chat-busy-state'
+import {
+  getAssistantWaitLabel,
+  hasConfirmedAssistantActivity,
+} from './chat-busy-state'
 import { TuiActivityCard } from './tui-activity-card'
 import { ScrollToBottomButton } from './scroll-to-bottom-button'
 import { ResearchCard } from './research-card'
@@ -1936,18 +1939,18 @@ function ChatMessageListComponent({
                   researchCard={researchCard}
                   isCompacting={isCompacting}
                   forceSimple={!showActivityFeed}
-                  hasConfirmedActivity={
-                    isCompacting ||
-                    isStreaming ||
-                    activeToolCalls.some(
+                  hasConfirmedActivity={hasConfirmedAssistantActivity({
+                    transportStreaming: isStreaming,
+                    isCompacting,
+                    hasRunningTool: activeToolCalls.some(
                       (toolCall) =>
                         toolCall.phase !== 'done' &&
                         toolCall.phase !== 'complete' &&
                         toolCall.phase !== 'completed',
-                    ) ||
-                    liveToolActivity.length > 0 ||
-                    lifecycleEvents.length > 0
-                  }
+                    ),
+                    liveToolActivityCount: liveToolActivity.length,
+                    lifecycleEventCount: lifecycleEvents.length,
+                  })}
                 />
                 {/* After 10s of thinking, show activity feed. With tool calls:
                     compact CLI-style TuiActivityCard (last 3). Without tool calls:
