@@ -10,6 +10,7 @@ const assistantAvatarUrl = sourceUrl(
 const agentAvatarUrl = sourceUrl('../../../components/agent-avatar.tsx')
 const userAvatarUrl = sourceUrl('../../../components/avatars/user-avatar.tsx')
 const composerUrl = sourceUrl('./chat-composer.tsx')
+const messageListUrl = sourceUrl('./chat-message-list.tsx')
 const lionAssetUrl = sourceUrl('../../../../public/aia-lion-avatar.webp')
 
 describe('AIA chat experience', () => {
@@ -51,5 +52,14 @@ describe('AIA chat experience', () => {
     expect(composer).toContain('AIA Copilot is responding')
     expect(composer).toContain('role="status"')
     expect(composer).toContain('aria-live="polite"')
+  })
+
+  it('shows Ariel working beside the assistant avatar before reply text arrives', async () => {
+    const messageList = await readFile(messageListUrl, 'utf8')
+
+    expect(messageList).toContain('Ariel is working…')
+    expect(messageList).toContain('<AssistantAvatar size={28} />')
+    expect(messageList).toContain('thinking-dot thinking-dot-1')
+    expect(messageList).toContain('aria-live="polite"')
   })
 })

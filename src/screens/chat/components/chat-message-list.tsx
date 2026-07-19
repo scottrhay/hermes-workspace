@@ -209,13 +209,13 @@ function ThinkingBubble({
   const uniqueNames = [...new Set([...activeToolNames, ...liveToolNames])]
   const activityLabel =
     uniqueNames.length > 0
-      ? `Using: ${uniqueNames.slice(0, 3).join(', ')}${uniqueNames.length > 3 ? ` +${uniqueNames.length - 3} more` : ''}`
+      ? `Ariel is using: ${uniqueNames.slice(0, 3).join(', ')}${uniqueNames.length > 3 ? ` +${uniqueNames.length - 3} more` : ''}`
       : null
   const statusLabel = isCompacting
-    ? 'Compacting context...'
+    ? 'Ariel is organizing context…'
     : forceSimple
-      ? 'Thinking…'
-      : activityLabel || heartbeatActivity || 'Thinking…'
+      ? 'Ariel is working…'
+      : activityLabel || heartbeatActivity || 'Ariel is working…'
 
   // Elapsed time counter — counts from bubble mount, not from last label change
   const [elapsed, setElapsed] = useState(0)
