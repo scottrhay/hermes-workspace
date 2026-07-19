@@ -9,8 +9,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import appCss from '../styles.css?url'
 import { getRootSurfaceState } from './-root-layout-state'
-import {  fetchClaudeAuthStatus } from '@/lib/claude-auth'
-import type {AuthStatus} from '@/lib/claude-auth';
+import type { AuthStatus } from '@/lib/claude-auth'
+import { fetchClaudeAuthStatus } from '@/lib/claude-auth'
 import { SearchModal } from '@/components/search/search-modal'
 import { UsageMeter } from '@/components/usage-meter'
 import { TerminalShortcutListener } from '@/components/terminal-shortcut-listener'
@@ -28,7 +28,11 @@ import {
   ONBOARDING_COMPLETE_EVENT,
   ONBOARDING_KEY,
 } from '@/components/onboarding/claude-onboarding'
-import { ErrorBoundary } from '@/components/error-boundary'
+import {
+  ErrorBoundary,
+  claimStaleRuntimeRecovery,
+  clearStaleRuntimeCaches,
+} from '@/components/error-boundary'
 import { LoginScreen } from '@/components/auth/login-screen'
 
 // Content Security Policy used to be emitted here as a `<meta http-equiv>`
@@ -115,6 +119,44 @@ const DEFAULT_SPLASH_HTML = `
 <div style="margin-top:28px;width:140px;height:3px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;position:relative"><div id="splash-bar" style="width:0%;height:100%;background:#FFAC02;border-radius:3px;transition:width 0.4s ease"></div></div>
 `
 
+function RootError({ error }: { error: unknown }) {
+  const [recovering, setRecovering] = useState(false)
+
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      !claimStaleRuntimeRecovery(error, window.sessionStorage)
+    ) {
+      return
+    }
+
+    setRecovering(true)
+    void clearStaleRuntimeCaches().finally(() => window.location.reload())
+  }, [error])
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center bg-primary-50">
+      <h1 className="text-2xl font-semibold text-primary-900 mb-4">
+        Something went wrong
+      </h1>
+      <p className="mb-4 text-sm text-primary-700">
+        {recovering
+          ? 'Updating Mission Control. This page will reload automatically.'
+          : 'Reload to try again.'}
+      </p>
+      <pre className="p-4 bg-primary-100 rounded-lg text-sm text-primary-700 max-w-full overflow-auto mb-6">
+        {error instanceof Error ? error.message : String(error)}
+      </pre>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors"
+      >
+        Reload
+      </button>
+    </div>
+  )
+}
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -189,24 +231,7 @@ export const Route = createRootRoute({
 
   shellComponent: RootDocument,
   component: RootLayout,
-  errorComponent: function RootError({ error }) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center bg-primary-50">
-        <h1 className="text-2xl font-semibold text-primary-900 mb-4">
-          Something went wrong
-        </h1>
-        <pre className="p-4 bg-primary-100 rounded-lg text-sm text-primary-700 max-w-full overflow-auto mb-6">
-          {error instanceof Error ? error.message : String(error)}
-        </pre>
-        <button
-          onClick={() => (window.location.href = '/')}
-          className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors"
-        >
-          Return Home
-        </button>
-      </div>
-    )
-  },
+  errorComponent: RootError,
 })
 
 const queryClient = new QueryClient()

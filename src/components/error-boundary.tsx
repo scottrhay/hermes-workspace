@@ -15,19 +15,49 @@ type ErrorBoundaryState = {
   recovering: boolean
 }
 
-const REACT_DOM_RECOVERY_KEY = 'hermes-react-dom-recovery-at'
-const REACT_DOM_RECOVERY_TTL_MS = 30_000
+const STALE_RUNTIME_RECOVERY_KEY = 'hermes-stale-runtime-recovery-at'
+const STALE_RUNTIME_RECOVERY_TTL_MS = 30_000
 
-function isReactDomReconciliationError(error: Error): boolean {
-  const message = `${error.name}: ${error.message}`
-  return (
+type RecoveryStorage = Pick<Storage, 'getItem' | 'setItem'>
+
+export function isRecoverableStaleRuntimeError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+  const lower = message.toLowerCase()
+  const isReactDomMismatch =
     message.includes('Failed to execute') &&
     (message.includes('insertBefore') || message.includes('removeChild')) &&
     message.includes('not a child of this node')
-  )
+  const isStaleBuildAsset =
+    lower.includes('failed to fetch dynamically imported module') ||
+    lower.includes('error loading dynamically imported module') ||
+    lower.includes('importing a module script failed') ||
+    lower.includes('chunkloaderror') ||
+    (lower.includes('loading chunk') && lower.includes('failed'))
+
+  return isReactDomMismatch || isStaleBuildAsset
 }
 
-async function clearStaleRuntimeCaches(): Promise<void> {
+export function claimStaleRuntimeRecovery(
+  error: unknown,
+  storage: RecoveryStorage,
+  now = Date.now(),
+): boolean {
+  if (!isRecoverableStaleRuntimeError(error)) return false
+
+  const previous = Number(
+    storage.getItem(STALE_RUNTIME_RECOVERY_KEY) ?? '0',
+  )
+  const alreadyRetried = Number.isFinite(previous)
+    ? now - previous < STALE_RUNTIME_RECOVERY_TTL_MS
+    : false
+  if (alreadyRetried) return false
+
+  storage.setItem(STALE_RUNTIME_RECOVERY_KEY, String(now))
+  return true
+}
+
+export async function clearStaleRuntimeCaches(): Promise<void> {
   if (typeof window === 'undefined') return
   try {
     if ('serviceWorker' in navigator) {
@@ -63,17 +93,13 @@ export class ErrorBoundary extends Component<
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Unhandled UI error', error, errorInfo)
 
-    if (typeof window === 'undefined' || !isReactDomReconciliationError(error)) {
+    if (
+      typeof window === 'undefined' ||
+      !claimStaleRuntimeRecovery(error, window.sessionStorage)
+    ) {
       return
     }
 
-    const previous = Number(window.sessionStorage.getItem(REACT_DOM_RECOVERY_KEY) ?? '0')
-    const alreadyRetried = Number.isFinite(previous)
-      ? Date.now() - previous < REACT_DOM_RECOVERY_TTL_MS
-      : false
-    if (alreadyRetried) return
-
-    window.sessionStorage.setItem(REACT_DOM_RECOVERY_KEY, String(Date.now()))
     this.setState({ recovering: true })
     void clearStaleRuntimeCaches().finally(() => {
       window.location.reload()
