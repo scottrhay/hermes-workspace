@@ -10,6 +10,15 @@ describe('workspace shell sidebar backdrop', () => {
   })
 })
 
+describe('Mission Control mobile chat navigation', () => {
+  it('opens the grouped chat dashboard from both primary mobile menus', () => {
+    expect(MOBILE_HAMBURGER_NAV_ITEMS.find((item) => item.id === 'chat')?.to).toBe(
+      '/chat',
+    )
+    expect(MOBILE_NAV_TABS.find((item) => item.id === 'chat')?.to).toBe('/chat')
+  })
+})
+
 describe('swarm2 navigation alias handling', () => {
   it('keeps /swarm as the only user-visible swarm entry in the mobile hamburger menu', () => {
     const swarm = MOBILE_HAMBURGER_NAV_ITEMS.find((item) => item.id === 'swarm')

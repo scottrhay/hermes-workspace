@@ -150,6 +150,11 @@ export function ChatWorkstreamsScreen() {
     workstreamsQuery.error instanceof Error
       ? workstreamsQuery.error.message
       : null
+  const connectionState = workstreamsQuery.isLoading
+    ? { label: 'Ariel · connecting', dot: 'animate-pulse bg-amber-500' }
+    : error
+      ? { label: 'Ariel · unavailable', dot: 'bg-red-500' }
+      : { label: 'Ariel · connected', dot: 'bg-emerald-500' }
 
   const toggleTheme = () => {
     const nextTheme = getThemeVariant(theme, dark ? 'light' : 'dark')
@@ -166,8 +171,8 @@ export function ChatWorkstreamsScreen() {
               AIA Copilot Mission Control
             </h1>
             <p className="mt-0.5 flex items-center gap-1.5 text-xs text-primary-500">
-              <span className="size-2 rounded-full bg-emerald-500" />
-              Ariel · online
+              <span className={cn('size-2 rounded-full', connectionState.dot)} />
+              {connectionState.label}
             </p>
           </div>
           <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_2.5rem] items-center gap-2 sm:w-auto sm:grid-cols-[18rem_auto]">

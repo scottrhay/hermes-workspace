@@ -32,7 +32,7 @@ export const MOBILE_HAMBURGER_NAV_ITEMS = [
     id: 'chat',
     label: 'Chat',
     icon: Chat01Icon,
-    to: '/chat/main',
+    to: '/chat',
     match: (p: string) => p.startsWith('/chat') || p === '/new' || p === '/',
   },
   {

@@ -120,8 +120,7 @@ export function CommandPalette({ pathname, sessions }: CommandPaletteProps) {
 
   const runSlashCommand = (command: string) => {
     if (command === '/new') {
-      // /chat index redirects to last session via localStorage — use the
-      // explicit 'new' sentinel so /new actually opens a fresh chat. See #300.
+      // Use the explicit 'new' sentinel so /new always opens a fresh chat.
       void navigate({ to: '/chat/$sessionKey', params: { sessionKey: 'new' } })
       return
     }
@@ -136,6 +135,19 @@ export function CommandPalette({ pathname, sessions }: CommandPaletteProps) {
       return
     }
 
+    const queueCommandAndOpenConversation = () => {
+      window.sessionStorage.setItem(CHAT_PENDING_COMMAND_STORAGE_KEY, command)
+      let sessionKey = 'new'
+      try {
+        const stored = window.localStorage.getItem('claude-last-session')
+        if (stored && stored !== 'main') sessionKey = stored
+      } catch {}
+      void navigate({
+        to: '/chat/$sessionKey',
+        params: { sessionKey },
+      })
+    }
+
     if (command === '/model' || command === '/skin') {
       const section = command === '/skin' ? 'appearance' : 'claude'
       if (pathname.startsWith('/chat') || pathname === '/') {
@@ -147,12 +159,11 @@ export function CommandPalette({ pathname, sessions }: CommandPaletteProps) {
         return
       }
 
-      window.sessionStorage.setItem(CHAT_PENDING_COMMAND_STORAGE_KEY, command)
-      void navigate({ to: '/chat' })
+      queueCommandAndOpenConversation()
       return
     }
 
-    if (pathname.startsWith('/chat') || pathname === '/') {
+    if (pathname.startsWith('/chat/') || pathname === '/new') {
       window.dispatchEvent(
         new CustomEvent(CHAT_RUN_COMMAND_EVENT, {
           detail: { command },
@@ -161,8 +172,7 @@ export function CommandPalette({ pathname, sessions }: CommandPaletteProps) {
       return
     }
 
-    window.sessionStorage.setItem(CHAT_PENDING_COMMAND_STORAGE_KEY, command)
-    void navigate({ to: '/chat' })
+    queueCommandAndOpenConversation()
   }
 
   const screenActions = useMemo<Array<CommandAction>>(
