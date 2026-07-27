@@ -7,6 +7,7 @@ import {
   publicTelegramToolEvent,
   publicTelegramToolFailure,
   resolveAuthorizedTelegramWorkstream,
+  stripTelegramSenderPrefix,
 } from './telegram-workstreams'
 
 const SCOTT_ID = '8304360654'
@@ -190,6 +191,7 @@ describe('normalizeTelegramWorkstreams', () => {
         sessionId: 'session-1',
         sessionKey: 'key-1',
         groupName: 'Training',
+        chatId: '',
         topicId: '88',
         title: 'Topic 88',
         updatedAt: 100000,
@@ -334,4 +336,163 @@ describe('normalizeTelegramWorkstreams', () => {
     expect(result[0].sessionId).toBe('session-b')
   })
 
+  it('populates chatId from row.chat_id, falling back to origin_json', () => {
+    const rows = [
+      {
+        id: 'from-row',
+        source: 'telegram',
+        user_id: SCOTT_ID,
+        session_key: 'key-row',
+        chat_id: 'row-chat-1',
+        thread_id: '10',
+        started_at: 100,
+      },
+      {
+        id: 'from-origin',
+        source: 'telegram',
+        user_id: SCOTT_ID,
+        session_key: 'key-origin',
+        thread_id: '11',
+        origin_json: JSON.stringify({ chat_id: 'origin-chat-1' }),
+        started_at: 100,
+      },
+      {
+        id: 'no-chat-id',
+        source: 'telegram',
+        user_id: SCOTT_ID,
+        session_key: 'key-none',
+        thread_id: '12',
+        started_at: 100,
+      },
+    ]
+
+    const result = normalizeTelegramWorkstreams(rows, SCOTT_ID)
+
+    expect(result.find((w) => w.sessionId === 'from-row')?.chatId).toBe(
+      'row-chat-1',
+    )
+    expect(result.find((w) => w.sessionId === 'from-origin')?.chatId).toBe(
+      'origin-chat-1',
+    )
+    expect(result.find((w) => w.sessionId === 'no-chat-id')?.chatId).toBe('')
+  })
+
+  it('prefers a topic name override over origin chat_topic, title, and the numeric fallback', () => {
+    const baseRow = {
+      source: 'telegram',
+      user_id: SCOTT_ID,
+      chat_id: 'chat-1',
+      started_at: 100,
+    }
+
+    const overridden = normalizeTelegramWorkstreams(
+      [
+        {
+          ...baseRow,
+          id: 's-override',
+          session_key: 'key-override',
+          thread_id: '20',
+          origin_json: JSON.stringify({ chat_topic: 'From Telegram' }),
+          title: 'AI generated title',
+        },
+      ],
+      SCOTT_ID,
+      { 'chat-1:20': 'User override' },
+    )
+    expect(overridden[0].title).toBe('User override')
+
+    const usesOrigin = normalizeTelegramWorkstreams(
+      [
+        {
+          ...baseRow,
+          id: 's-origin',
+          session_key: 'key-origin-title',
+          thread_id: '21',
+          origin_json: JSON.stringify({ chat_topic: 'From Telegram' }),
+          title: 'AI generated title',
+        },
+      ],
+      SCOTT_ID,
+    )
+    expect(usesOrigin[0].title).toBe('From Telegram')
+
+    const usesRowTitle = normalizeTelegramWorkstreams(
+      [
+        {
+          ...baseRow,
+          id: 's-title',
+          session_key: 'key-title',
+          thread_id: '22',
+          title: 'AI generated title',
+        },
+      ],
+      SCOTT_ID,
+    )
+    expect(usesRowTitle[0].title).toBe('AI generated title')
+
+    const usesFallback = normalizeTelegramWorkstreams(
+      [
+        {
+          ...baseRow,
+          id: 's-fallback',
+          session_key: 'key-fallback',
+          thread_id: '23',
+        },
+      ],
+      SCOTT_ID,
+    )
+    expect(usesFallback[0].title).toBe('Topic 23')
+  })
+
+  it('preserves prior behavior when the overrides argument is omitted', () => {
+    const rows = [
+      {
+        id: 'session-1',
+        source: 'telegram',
+        user_id: SCOTT_ID,
+        session_key: 'key-1',
+        chat_id: 'chat-1',
+        thread_id: '30',
+        title: 'Existing title',
+        started_at: 100,
+      },
+    ]
+
+    expect(normalizeTelegramWorkstreams(rows, SCOTT_ID)).toEqual(
+      normalizeTelegramWorkstreams(rows, SCOTT_ID, {}),
+    )
+  })
+})
+
+describe('stripTelegramSenderPrefix', () => {
+  it('strips a leading [Sender Name] tag', () => {
+    expect(stripTelegramSenderPrefix('[Scott Hay] hello')).toBe('hello')
+  })
+
+  it('leaves a trailing bracketed tag unchanged', () => {
+    expect(stripTelegramSenderPrefix('hello [Scott Hay]')).toBe(
+      'hello [Scott Hay]',
+    )
+  })
+
+  it('strips only the first prefix, never repeatedly', () => {
+    expect(stripTelegramSenderPrefix('[Scott Hay] [URGENT] do it')).toBe(
+      '[URGENT] do it',
+    )
+  })
+
+  it('leaves text with no prefix unchanged', () => {
+    expect(stripTelegramSenderPrefix('no prefix here')).toBe(
+      'no prefix here',
+    )
+  })
+
+  it('leaves empty brackets unchanged since the regex requires 1+ chars', () => {
+    expect(stripTelegramSenderPrefix('[] hello')).toBe('[] hello')
+  })
+
+  it('leaves multi-line text whose first line does not match unchanged', () => {
+    const text = 'no prefix on this line\n[Scott Hay] second line'
+    expect(stripTelegramSenderPrefix(text)).toBe(text)
+  })
 })

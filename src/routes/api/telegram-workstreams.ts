@@ -9,6 +9,7 @@ import {
   getTelegramOwnerUserId,
   normalizeTelegramWorkstreams,
 } from '../../server/telegram-workstreams'
+import { readTopicNameOverrides } from '../../server/telegram-topic-names'
 import { isAuthenticated } from '../../server/auth-middleware'
 
 export const Route = createFileRoute('/api/telegram-workstreams')({
@@ -40,6 +41,7 @@ export const Route = createFileRoute('/api/telegram-workstreams')({
             workstreams: normalizeTelegramWorkstreams(
               sessions,
               getTelegramOwnerUserId(),
+              readTopicNameOverrides(),
             ),
           })
         } catch (error) {

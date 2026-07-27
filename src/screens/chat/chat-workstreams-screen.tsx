@@ -1,19 +1,23 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
+  Cancel01Icon,
   Moon02Icon,
+  PencilEdit02Icon,
   RefreshIcon,
   Search01Icon,
   Sun02Icon,
+  Tick02Icon,
 } from '@hugeicons/core-free-icons'
 import {
   fetchTelegramWorkstreams,
   filterTelegramWorkstreams,
   groupTelegramWorkstreams,
+  renameTelegramTopic,
   telegramWorkstreamQueryKey,
 } from './telegram-workstreams'
 import {
@@ -24,6 +28,7 @@ import {
   sortWorkstreamGroups,
 } from './chat-workstreams-view'
 import type { TelegramWorkstream } from './telegram-workstreams'
+import { toast } from '@/components/ui/toast'
 import { usePageTitle } from '@/hooks/use-page-title'
 import {
   getTheme,
@@ -99,27 +104,137 @@ function AttentionCard({ workstream }: { workstream: TelegramWorkstream }) {
   )
 }
 
+function topicRenameOutcomeMessage(result: {
+  telegram?: string
+  telegramError?: string
+}): { message: string; type: 'success' | 'info' | 'warning' } {
+  if (result.telegram === 'renamed') {
+    return { message: 'Renamed in Telegram', type: 'success' }
+  }
+  if (result.telegram === 'unavailable') {
+    return {
+      message:
+        'Saved locally — set TELEGRAM_BOT_TOKEN to push renames to Telegram',
+      type: 'info',
+    }
+  }
+  return {
+    message: `Saved locally — Telegram rename failed: ${result.telegramError ?? 'unknown error'}`,
+    type: 'warning',
+  }
+}
+
 function TopicChip({ workstream }: { workstream: TelegramWorkstream }) {
+  const queryClient = useQueryClient()
+  const [isEditing, setIsEditing] = useState(false)
+  const [value, setValue] = useState(workstream.title)
+
+  const renameMutation = useMutation({
+    mutationFn: renameTelegramTopic,
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({
+        queryKey: telegramWorkstreamQueryKey,
+      })
+      const outcome = topicRenameOutcomeMessage(result)
+      toast(outcome.message, { type: outcome.type })
+      setIsEditing(false)
+    },
+    onError: (error) => {
+      toast(error instanceof Error ? error.message : 'Failed to rename topic', {
+        type: 'error',
+      })
+    },
+  })
+
+  function startEditing() {
+    setValue(workstream.title)
+    setIsEditing(true)
+  }
+
+  function save() {
+    const trimmed = value.trim()
+    if (!trimmed || trimmed === workstream.title) {
+      setIsEditing(false)
+      return
+    }
+    renameMutation.mutate({
+      chatId: workstream.chatId,
+      topicId: workstream.topicId,
+      name: trimmed,
+    })
+  }
+
+  if (isEditing) {
+    return (
+      <div className="inline-flex max-w-full items-center gap-1 rounded-lg border border-accent-500/50 bg-primary-100/60 px-2.5 py-1.5 text-xs font-medium text-primary-800">
+        <input
+          autoFocus
+          value={value}
+          disabled={renameMutation.isPending}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              save()
+            } else if (event.key === 'Escape') {
+              event.preventDefault()
+              setIsEditing(false)
+            }
+          }}
+          className="min-w-0 flex-1 bg-transparent outline-none"
+        />
+        <button
+          type="button"
+          onClick={save}
+          disabled={renameMutation.isPending}
+          title="Save"
+          className="shrink-0 rounded p-0.5 hover:bg-primary-200"
+        >
+          <HugeiconsIcon icon={Tick02Icon} size={13} strokeWidth={1.7} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsEditing(false)}
+          disabled={renameMutation.isPending}
+          title="Cancel"
+          className="shrink-0 rounded p-0.5 hover:bg-primary-200"
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={13} strokeWidth={1.7} />
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <Link
-      to="/chat/$sessionKey"
-      params={{ sessionKey: workstream.sessionId }}
-      className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-100/60 px-2.5 py-1.5 text-xs font-medium text-primary-800 transition hover:border-accent-500/50 hover:bg-accent-500/10 hover:text-accent-500"
-      title={`${workstream.title} · Topic #${workstream.topicId} · ${workstream.messageCount} total messages`}
-    >
-      <span
-        className={cn(
-          'size-1.5 shrink-0 rounded-full',
-          workstream.isActive ? 'animate-pulse bg-sky-500' : 'bg-primary-300',
-        )}
-      />
-      <span className="truncate">{workstream.title}</span>
-      {workstream.messageCount > 0 ? (
-        <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-600 px-1.5 py-0.5 text-[9px] font-bold text-white">
-          {workstream.messageCount.toLocaleString()}
-        </span>
-      ) : null}
-    </Link>
+    <div className="group inline-flex max-w-full items-center gap-0.5 rounded-lg border border-primary-200 bg-primary-100/60 pl-2.5 pr-1 py-1.5 text-xs font-medium text-primary-800 transition hover:border-accent-500/50 hover:bg-accent-500/10">
+      <Link
+        to="/chat/$sessionKey"
+        params={{ sessionKey: workstream.sessionId }}
+        className="inline-flex min-w-0 flex-1 items-center gap-1.5 hover:text-accent-500"
+        title={`${workstream.title} · Topic #${workstream.topicId} · ${workstream.messageCount} total messages`}
+      >
+        <span
+          className={cn(
+            'size-1.5 shrink-0 rounded-full',
+            workstream.isActive ? 'animate-pulse bg-sky-500' : 'bg-primary-300',
+          )}
+        />
+        <span className="truncate">{workstream.title}</span>
+        {workstream.messageCount > 0 ? (
+          <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-600 px-1.5 py-0.5 text-[9px] font-bold text-white">
+            {workstream.messageCount.toLocaleString()}
+          </span>
+        ) : null}
+      </Link>
+      <button
+        type="button"
+        onClick={startEditing}
+        title="Rename topic"
+        className="shrink-0 rounded p-1 opacity-100 transition-opacity hover:bg-primary-200 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+      >
+        <HugeiconsIcon icon={PencilEdit02Icon} size={12} strokeWidth={1.7} />
+      </button>
+    </div>
   )
 }
 

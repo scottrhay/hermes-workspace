@@ -87,6 +87,7 @@ describe('GET /api/telegram-workstreams', () => {
           sessionId: 'session-2246',
           sessionKey: 'telegram-key-2246',
           groupName: 'Executive Administration',
+          chatId: '',
           topicId: '2246',
           title: 'Mission Control integration',
           updatedAt: 200000,

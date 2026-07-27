@@ -20,6 +20,7 @@ export type TelegramWorkstream = {
   sessionId: string
   sessionKey: string
   groupName: string
+  chatId: string
   topicId: string
   title: string
   updatedAt: number
@@ -32,14 +33,16 @@ function cleanString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function originGroupName(originJson: unknown): string {
+function parseOriginJson(originJson: unknown): Record<string, unknown> | null {
   const raw = cleanString(originJson)
-  if (!raw) return ''
+  if (!raw) return null
   try {
-    const origin = JSON.parse(raw) as Record<string, unknown>
-    return cleanString(origin.chat_name)
+    const parsed = JSON.parse(raw) as unknown
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null
   } catch {
-    return ''
+    return null
   }
 }
 
@@ -77,6 +80,7 @@ function isNewerSession(
 export function normalizeTelegramWorkstreams(
   rows: Array<TelegramSessionRow>,
   ownerUserId: string,
+  topicNameOverrides: Record<string, string> = {},
 ): Array<TelegramWorkstream> {
   const owner = cleanString(ownerUserId)
   const newestByKey = new Map<string, TelegramSessionRow>()
@@ -98,12 +102,12 @@ export function normalizeTelegramWorkstreams(
       continue
     }
 
-    const groupName =
-      cleanString(row.display_name) || originGroupName(row.origin_json)
+    const origin = parseOriginJson(row.origin_json)
+    const groupName = cleanString(row.display_name) || cleanString(origin?.chat_name)
     if (groupName && !groupNameByKey.has(sessionKey)) {
       groupNameByKey.set(sessionKey, groupName)
     }
-    const chatId = cleanString(row.chat_id)
+    const chatId = cleanString(row.chat_id) || cleanString(origin?.chat_id)
     if (groupName && chatId && !groupNameByChatId.has(chatId)) {
       groupNameByChatId.set(chatId, groupName)
     }
@@ -117,17 +121,24 @@ export function normalizeTelegramWorkstreams(
   return Array.from(newestByKey.entries())
     .map(([sessionKey, row]) => {
       const topicId = cleanString(row.thread_id)
+      const origin = parseOriginJson(row.origin_json)
+      const chatId = cleanString(row.chat_id) || cleanString(origin?.chat_id)
       return {
         sessionId: cleanString(row.id),
         sessionKey,
         groupName:
           cleanString(row.display_name) ||
-          originGroupName(row.origin_json) ||
+          cleanString(origin?.chat_name) ||
           groupNameByKey.get(sessionKey) ||
-          groupNameByChatId.get(cleanString(row.chat_id)) ||
+          groupNameByChatId.get(chatId) ||
           'Telegram Group',
+        chatId,
         topicId,
-        title: cleanString(row.title) || `Topic ${topicId}`,
+        title:
+          cleanString(topicNameOverrides[`${chatId}:${topicId}`]) ||
+          cleanString(origin?.chat_topic) ||
+          cleanString(row.title) ||
+          `Topic ${topicId}`,
         updatedAt: secondsToMilliseconds(row.last_active ?? row.started_at),
         messageCount:
           typeof row.message_count === 'number' &&
@@ -172,6 +183,17 @@ export function isAuthorizedTelegramSessionPair(
       cleanString(row.id) === sessionId &&
       cleanString(row.thread_id) !== '1',
   )
+}
+
+const SENDER_PREFIX_RE = /^\[[^\]\n]{1,64}\]\s+/
+
+/**
+ * Strips a leading `[Sender Name] ` tag that the Hermes gateway bakes into
+ * inbound Telegram group messages. Only the first prefix is removed; the
+ * rest of the text (including any further bracketed tags) is left as-is.
+ */
+export function stripTelegramSenderPrefix(text: string): string {
+  return text.replace(SENDER_PREFIX_RE, '')
 }
 
 export function publicTelegramToolFailure(

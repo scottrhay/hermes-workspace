@@ -39,15 +39,18 @@ function mergeSessionTitle(
   }
 }
 
-function mergeTelegramMetadata(
+export function mergeTelegramMetadata(
   session: SessionMeta,
   workstream: TelegramWorkstream | undefined,
 ): SessionMeta {
   if (!workstream) return session
   return {
     ...session,
-    title: session.title || workstream.title,
-    derivedTitle: session.derivedTitle || workstream.title,
+    // The workstream title carries topic-name precedence (user override →
+    // Telegram chat_topic → session title), so it outranks the session's own
+    // AI-generated title — matching buildSyntheticActiveSession below.
+    title: workstream.title || session.title,
+    derivedTitle: workstream.title || session.derivedTitle,
     source: 'telegram',
     sessionKey: workstream.sessionKey,
     threadId: workstream.topicId,

@@ -7,6 +7,7 @@ export type TelegramWorkstream = {
   sessionId: string
   sessionKey: string
   groupName: string
+  chatId: string
   topicId: string
   title: string
   updatedAt: number
@@ -36,6 +37,32 @@ export async function fetchTelegramWorkstreams(): Promise<
     throw new Error(payload.error || 'Failed to load Telegram workstreams')
   }
   return Array.isArray(payload.workstreams) ? payload.workstreams : []
+}
+
+export type RenameTelegramTopicResult = {
+  ok: boolean
+  telegram?: string
+  telegramError?: string
+  error?: string
+}
+
+export async function renameTelegramTopic(input: {
+  chatId: string
+  topicId: string
+  name: string
+}): Promise<RenameTelegramTopicResult> {
+  const response = await fetch('/api/telegram-topic-name', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  const payload = (await response
+    .json()
+    .catch(() => ({}))) as RenameTelegramTopicResult
+  if (!response.ok) {
+    throw new Error(payload.error || 'Failed to rename Telegram topic')
+  }
+  return payload
 }
 
 export function filterTelegramWorkstreams(

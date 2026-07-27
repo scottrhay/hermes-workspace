@@ -13,6 +13,7 @@ const workstream = (
   sessionId: 'session-1',
   sessionKey: 'stable-1',
   groupName: 'Research',
+  chatId: '-1001',
   topicId: '5',
   title: 'AI Research',
   updatedAt: 100,

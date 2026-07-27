@@ -5,6 +5,7 @@ import {
   ensureGatewayProbed,
   getGatewayCapabilities,
   getMessages,
+  getSession,
   listSessions,
   toChatMessage,
 } from '../../server/claude-api'
@@ -13,8 +14,26 @@ import {
   resolveSessionKey,
   shouldBindMainToPortableSession,
 } from '../../server/session-utils'
+import { getLocalMessages, getLocalSession } from '../../server/local-session-store'
+import { stripTelegramSenderPrefix } from '../../server/telegram-workstreams'
 import { isAuthenticated } from '@/server/auth-middleware'
-import { getLocalSession, getLocalMessages } from '../../server/local-session-store'
+
+// Repeated history polls hit this endpoint frequently; cache whether a
+// session is a Telegram workstream so we don't re-fetch session metadata
+// on every poll just to decide whether to strip the sender prefix.
+const telegramSessionCache = new Map<string, boolean>()
+async function isTelegramSession(sessionKey: string): Promise<boolean> {
+  const cached = telegramSessionCache.get(sessionKey)
+  if (cached !== undefined) return cached
+  try {
+    const session = await getSession(sessionKey)
+    const isTelegram = session.source === 'telegram'
+    telegramSessionCache.set(sessionKey, isTelegram)
+    return isTelegram
+  } catch {
+    return false // do not cache failures
+  }
+}
 
 export const Route = createFileRoute('/api/history')({
   server: {
@@ -124,12 +143,20 @@ export const Route = createFileRoute('/api/history')({
           }
 
           const boundedMessages = limit > 0 ? messages.slice(-limit) : messages
+          const stripPrefixes = await isTelegramSession(sessionKey)
 
           return json({
             sessionKey,
             sessionId: sessionKey,
             messages: boundedMessages.map((message, index) =>
-              toChatMessage(message, { historyIndex: index }),
+              toChatMessage(
+                stripPrefixes &&
+                  message.role === 'user' &&
+                  typeof message.content === 'string'
+                  ? { ...message, content: stripTelegramSenderPrefix(message.content) }
+                  : message,
+                { historyIndex: index },
+              ),
             ),
           })
         } catch (err) {

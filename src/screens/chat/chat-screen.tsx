@@ -1272,6 +1272,10 @@ export function ChatScreen({
             status: 'queued',
           }),
         )
+        // Unlock the composer as soon as the server accepts the message.
+        // A long busy turn may never emit a run-start event, and the
+        // composer must stay editable for steering follow-ups.
+        setSending(false)
       },
       [queryClient],
     ),

@@ -23,6 +23,7 @@ import { openaiChat } from '../../server/openai-compat-api'
 import { streamResponses } from '../../server/responses-api'
 import { selectPortableConversationHistory } from '../../server/portable-history'
 import { acquireTelegramSendLock } from '../../server/telegram-send-lock'
+import { mirrorMessageToTelegramTopic } from '../../server/telegram-mirror'
 import { createTelegramStreamLifecycle } from '../../server/telegram-stream-lifecycle'
 import { createTelegramStreamTerminalHandlers } from '../../server/telegram-stream-terminal'
 import {
@@ -387,6 +388,8 @@ export const Route = createFileRoute('/api/send-stream')({
           }
         }
 
+        let telegramMirrorTarget: { chatId: string; topicId: string } | null = null
+
         if (gatewaySessionKey) {
           let telegramSessions: Awaited<ReturnType<typeof listSessions>>
           try {
@@ -448,6 +451,12 @@ export const Route = createFileRoute('/api/send-stream')({
             )
           }
           currentRawSessionKey = currentWorkstream.sessionId
+          if (currentWorkstream.chatId && currentWorkstream.topicId) {
+            telegramMirrorTarget = {
+              chatId: currentWorkstream.chatId,
+              topicId: currentWorkstream.topicId,
+            }
+          }
         }
 
         // Resolve session key
@@ -510,6 +519,17 @@ export const Route = createFileRoute('/api/send-stream')({
         if (gatewaySessionKey) {
           try {
             await submitSession(sessionKey, scopedMessage, gatewaySessionKey)
+            if (telegramMirrorTarget) {
+              void mirrorMessageToTelegramTopic(
+                telegramMirrorTarget.chatId,
+                telegramMirrorTarget.topicId,
+                message,
+              ).then((result) => {
+                if (result.status === 'failed') {
+                  console.warn('[send-stream] Telegram mirror failed:', result.telegramError)
+                }
+              })
+            }
             const headers = buildResolvedSessionHeaders({
               sessionKey,
               friendlyId: resolvedFriendlyId,
