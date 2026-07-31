@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { remoteUrlMatches, updateAvailableFromDivergence } from './update-system'
+import { afterEach, describe, expect, it } from 'vitest'
+import {
+  agentUpdatesEnabled,
+  applyAgentUpdate,
+  readAgentUpdateStatus,
+  remoteUrlMatches,
+  updateAvailableFromDivergence,
+} from './update-system'
 
 describe('update-system helpers', () => {
   it('matches GitHub URL forms against expected repo aliases', () => {
@@ -26,5 +32,40 @@ describe('update-system helpers', () => {
     expect(updateAvailableFromDivergence({ ahead: 2, behind: 3 }, true)).toBe(true)
     expect(updateAvailableFromDivergence({ ahead: 0, behind: 0 }, false)).toBe(false)
     expect(updateAvailableFromDivergence(null, true)).toBe(true)
+  })
+})
+
+describe('agent update kill switch', () => {
+  afterEach(() => {
+    delete process.env.HERMES_ALLOW_AGENT_UPDATE
+  })
+
+  it('is disabled unless HERMES_ALLOW_AGENT_UPDATE is exactly "1"', () => {
+    delete process.env.HERMES_ALLOW_AGENT_UPDATE
+    expect(agentUpdatesEnabled()).toBe(false)
+    for (const value of ['', '0', 'true', 'yes']) {
+      process.env.HERMES_ALLOW_AGENT_UPDATE = value
+      expect(agentUpdatesEnabled()).toBe(false)
+    }
+    process.env.HERMES_ALLOW_AGENT_UPDATE = '1'
+    expect(agentUpdatesEnabled()).toBe(true)
+  })
+
+  it('reports the agent as unsupported so the notifier hides the button', () => {
+    delete process.env.HERMES_ALLOW_AGENT_UPDATE
+    const status = readAgentUpdateStatus()
+    // The notifier filters the banner on updateAvailable && canUpdate.
+    expect(status.canUpdate).toBe(false)
+    expect(status.updateAvailable).toBe(false)
+    expect(status.state).toBe('unsupported')
+    expect(status.reason).toMatch(/HERMES_ALLOW_AGENT_UPDATE/)
+  })
+
+  it('refuses to apply an agent update while disabled', () => {
+    delete process.env.HERMES_ALLOW_AGENT_UPDATE
+    const result = applyAgentUpdate()
+    expect(result.ok).toBe(false)
+    expect(result.restartRequired).toBe(false)
+    expect(result.error).toMatch(/disabled/i)
   })
 })

@@ -408,6 +408,25 @@ export function readWorkspaceUpdateStatus(
   }
 }
 
+/**
+ * One-click Hermes Agent updates are opt-in, and off by default.
+ *
+ * `applyAgentUpdate` only syncs the git checkout — unlike the workspace path
+ * it never reinstalls dependencies. Upstream moves fast enough that a routine
+ * jump can change pyproject.toml/uv.lock, which would leave the running
+ * gateway pointed at a venv that no longer satisfies its imports. Updating
+ * the agent is therefore a deliberate, hands-on operation: sync, reinstall
+ * the venv, restart the gateway, verify platforms reconnect.
+ *
+ * Set HERMES_ALLOW_AGENT_UPDATE=1 to restore the in-app button.
+ */
+export function agentUpdatesEnabled(): boolean {
+  return process.env.HERMES_ALLOW_AGENT_UPDATE === '1'
+}
+
+const AGENT_UPDATE_DISABLED_REASON =
+  'One-click Hermes Agent updates are disabled. The in-app updater syncs the git checkout but does not reinstall the venv, so update the agent manually (sync, reinstall dependencies, restart the gateway). Set HERMES_ALLOW_AGENT_UPDATE=1 to re-enable.'
+
 function agentRepoPath(): string | null {
   const candidates = [
     process.env.HERMES_AGENT_REPO,
@@ -431,6 +450,29 @@ export function readAgentUpdateStatus(): ProductUpdateStatus {
     (path ? exec(path, ['--version'], { timeout: 10_000 }) : null)?.split(
       '\n',
     )[0] ?? 'unknown'
+
+  // Reported as unsupported rather than available: the notifier only renders
+  // its Update button for products with canUpdate, so this single gate hides
+  // the button and (via applyAgentUpdate's own check) closes the endpoint.
+  // Version/path still resolve so the update center can show what is installed.
+  if (!agentUpdatesEnabled()) {
+    return {
+      id: 'agent',
+      label: 'Hermes Agent',
+      installKind: repoPath ? 'git' : 'unknown',
+      version,
+      path,
+      repoPath,
+      branch: null,
+      currentHead: null,
+      latestHead: null,
+      updateAvailable: false,
+      canUpdate: false,
+      state: 'unsupported',
+      reason: AGENT_UPDATE_DISABLED_REASON,
+      updateMode: 'manual',
+    }
+  }
 
   if (!repoPath) {
     return {
@@ -619,6 +661,19 @@ export function applyWorkspaceUpdate(): ApplyUpdateResult {
 
 export function applyAgentUpdate(): ApplyUpdateResult {
   const before = readAgentUpdateStatus()
+  // Explicit, even though the canUpdate check below already covers it: the
+  // kill switch must not depend on how readAgentUpdateStatus reports state.
+  if (!agentUpdatesEnabled()) {
+    return {
+      ok: false,
+      product: 'agent',
+      output: '',
+      restartRequired: false,
+      status: before,
+      releaseNotes: [],
+      error: AGENT_UPDATE_DISABLED_REASON,
+    }
+  }
   if (!before.canUpdate || !before.repoPath) {
     return {
       ok: false,
