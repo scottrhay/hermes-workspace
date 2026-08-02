@@ -21,6 +21,16 @@ export const Route = createFileRoute('/api/commands')({
         try {
           const res = await gatewayFetch('/v1/commands')
 
+          // Not every gateway build serves /v1/commands. A 404 means this
+          // gateway simply has no server-side slash commands — a missing
+          // capability, not a failure — so report an empty list instead of
+          // propagating a 404 the browser logs as a console error on every
+          // chat load. The composer merges this with its own defaults.
+          // Other non-ok statuses still surface as real errors.
+          if (res.status === 404) {
+            return json({ commands: [] })
+          }
+
           if (!res.ok) {
             return json(
               { error: `Gateway responded with status ${res.status}` },
