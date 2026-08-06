@@ -1,7 +1,12 @@
 /** @vitest-environment jsdom */
-import { beforeEach, describe, expect, it } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { __updateReleaseNotesStorageForTests } from './update-center-notifier'
+import {
+  UpdateCenterNotifier,
+  __updateReleaseNotesStorageForTests,
+} from './update-center-notifier'
 
 const { NOTES_SEEN_KEY, storeNotes } = __updateReleaseNotesStorageForTests
 
@@ -60,4 +65,35 @@ describe('update center release notes storage', () => {
 
     expect(storeNotes(agentReleaseNotes)).toBeNull()
   })
+
+  it('defers the expensive update probe until the workspace is usable', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ products: {} }), { status: 200 }),
+      )
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    render(
+      <QueryClientProvider client={client}>
+        <UpdateCenterNotifier />
+      </QueryClientProvider>,
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(14_999)
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await act(async () => {
+      vi.advanceTimersByTime(1)
+      await Promise.resolve()
+    })
+    expect(fetchMock).toHaveBeenCalledWith('/api/update/status')
+    vi.useRealTimers()
+  })
 })
+

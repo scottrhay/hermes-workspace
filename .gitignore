@@ -95,7 +95,10 @@ tmp/
 # Task data (local persistence)
 data/
 dist/
-research/
+# Anchored: an unanchored `research/` also matched source dirs such as
+# src/screens/research/, which hid them from git and from Tailwind's
+# source scanner (utilities in those files silently failed to compile).
+/research/
 BROWSER-RESEARCH.md
 CHAT-TEST-REPORT.md
 DEVELOPMENT-STATUS.md
@@ -154,3 +157,8 @@ skills-bundle/
 pr-triage-20260505-*/
 .playwright-mcp/
 chat-session*.png
+
+# Playwright artifacts
+/test-results/
+/playwright-report/
+/blob-report/

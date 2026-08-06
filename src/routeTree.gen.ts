@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorldRouteImport } from './routes/world'
 import { Route as VtCapitalRouteImport } from './routes/vt-capital'
+import { Route as TrainingRouteImport } from './routes/training'
 import { Route as TerminalRouteImport } from './routes/terminal'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as Swarm2RouteImport } from './routes/swarm2'
@@ -18,11 +19,13 @@ import { Route as SwarmRouteImport } from './routes/swarm'
 import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReserveRouteImport } from './routes/reserve'
+import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ProfilesRouteImport } from './routes/profiles'
 import { Route as PlaygroundRouteImport } from './routes/playground'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as HermesWorldRouteImport } from './routes/hermes-world'
 import { Route as FilesRouteImport } from './routes/files'
@@ -47,6 +50,7 @@ import { Route as ApiTerminalInputRouteImport } from './routes/api/terminal-inpu
 import { Route as ApiTerminalCloseRouteImport } from './routes/api/terminal-close'
 import { Route as ApiTelegramWorkstreamsRouteImport } from './routes/api/telegram-workstreams'
 import { Route as ApiTelegramTopicNameRouteImport } from './routes/api/telegram-topic-name'
+import { Route as ApiTelegramTopicCreateRouteImport } from './routes/api/telegram-topic-create'
 import { Route as ApiSystemMetricsRouteImport } from './routes/api/system-metrics'
 import { Route as ApiSwarmTmuxStopRouteImport } from './routes/api/swarm-tmux-stop'
 import { Route as ApiSwarmTmuxStartRouteImport } from './routes/api/swarm-tmux-start'
@@ -83,6 +87,9 @@ import { Route as ApiPlaygroundNpcRouteImport } from './routes/api/playground-np
 import { Route as ApiPlaygroundAdminRouteImport } from './routes/api/playground-admin'
 import { Route as ApiPingRouteImport } from './routes/api/ping'
 import { Route as ApiPathsRouteImport } from './routes/api/paths'
+import { Route as ApiOpenengineWorkItemsRouteImport } from './routes/api/openengine-work-items'
+import { Route as ApiOpenengineProbeRouteImport } from './routes/api/openengine-probe'
+import { Route as ApiOpenbrainStatsRouteImport } from './routes/api/openbrain-stats'
 import { Route as ApiModelsRouteImport } from './routes/api/models'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiMediaRouteImport } from './routes/api/media'
@@ -126,6 +133,9 @@ import { Route as ApiSkillsHubSearchRouteImport } from './routes/api/skills/hub-
 import { Route as ApiSessionsSendRouteImport } from './routes/api/sessions/send'
 import { Route as ApiSessionsSearchRouteImport } from './routes/api/sessions/search'
 import { Route as ApiRunsActiveRouteImport } from './routes/api/runs/active'
+import { Route as ApiResearchSearchRouteImport } from './routes/api/research/search'
+import { Route as ApiResearchReadRouteImport } from './routes/api/research/read'
+import { Route as ApiResearchListRouteImport } from './routes/api/research/list'
 import { Route as ApiProfilesUpdateRouteImport } from './routes/api/profiles/update'
 import { Route as ApiProfilesToggleSkillRouteImport } from './routes/api/profiles/toggle-skill'
 import { Route as ApiProfilesSkillsRouteImport } from './routes/api/profiles/skills'
@@ -135,6 +145,7 @@ import { Route as ApiProfilesListRouteImport } from './routes/api/profiles/list'
 import { Route as ApiProfilesDeleteRouteImport } from './routes/api/profiles/delete'
 import { Route as ApiProfilesCreateRouteImport } from './routes/api/profiles/create'
 import { Route as ApiProfilesActivateRouteImport } from './routes/api/profiles/activate'
+import { Route as ApiOpenengineWorkItemsIdRouteImport } from './routes/api/openengine-work-items.$id'
 import { Route as ApiOauthPollTokenRouteImport } from './routes/api/oauth.poll-token'
 import { Route as ApiOauthDeviceCodeRouteImport } from './routes/api/oauth.device-code'
 import { Route as ApiModelInfoRouteImport } from './routes/api/model/info'
@@ -182,6 +193,11 @@ const VtCapitalRoute = VtCapitalRouteImport.update({
   path: '/vt-capital',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrainingRoute = TrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TerminalRoute = TerminalRouteImport.update({
   id: '/terminal',
   path: '/terminal',
@@ -217,6 +233,11 @@ const ReserveRoute = ReserveRouteImport.update({
   path: '/reserve',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResearchRoute = ResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfilesRoute = ProfilesRouteImport.update({
   id: '/profiles',
   path: '/profiles',
@@ -240,6 +261,11 @@ const MemoryRoute = MemoryRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingRoute = MarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsRoute = JobsRouteImport.update({
@@ -360,6 +386,11 @@ const ApiTelegramWorkstreamsRoute = ApiTelegramWorkstreamsRouteImport.update({
 const ApiTelegramTopicNameRoute = ApiTelegramTopicNameRouteImport.update({
   id: '/api/telegram-topic-name',
   path: '/api/telegram-topic-name',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTelegramTopicCreateRoute = ApiTelegramTopicCreateRouteImport.update({
+  id: '/api/telegram-topic-create',
+  path: '/api/telegram-topic-create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSystemMetricsRoute = ApiSystemMetricsRouteImport.update({
@@ -541,6 +572,21 @@ const ApiPingRoute = ApiPingRouteImport.update({
 const ApiPathsRoute = ApiPathsRouteImport.update({
   id: '/api/paths',
   path: '/api/paths',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenengineWorkItemsRoute = ApiOpenengineWorkItemsRouteImport.update({
+  id: '/api/openengine-work-items',
+  path: '/api/openengine-work-items',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenengineProbeRoute = ApiOpenengineProbeRouteImport.update({
+  id: '/api/openengine-probe',
+  path: '/api/openengine-probe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenbrainStatsRoute = ApiOpenbrainStatsRouteImport.update({
+  id: '/api/openbrain-stats',
+  path: '/api/openbrain-stats',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiModelsRoute = ApiModelsRouteImport.update({
@@ -758,6 +804,21 @@ const ApiRunsActiveRoute = ApiRunsActiveRouteImport.update({
   path: '/api/runs/active',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiResearchSearchRoute = ApiResearchSearchRouteImport.update({
+  id: '/api/research/search',
+  path: '/api/research/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiResearchReadRoute = ApiResearchReadRouteImport.update({
+  id: '/api/research/read',
+  path: '/api/research/read',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiResearchListRoute = ApiResearchListRouteImport.update({
+  id: '/api/research/list',
+  path: '/api/research/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiProfilesUpdateRoute = ApiProfilesUpdateRouteImport.update({
   id: '/api/profiles/update',
   path: '/api/profiles/update',
@@ -803,6 +864,12 @@ const ApiProfilesActivateRoute = ApiProfilesActivateRouteImport.update({
   path: '/api/profiles/activate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOpenengineWorkItemsIdRoute =
+  ApiOpenengineWorkItemsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiOpenengineWorkItemsRoute,
+  } as any)
 const ApiOauthPollTokenRoute = ApiOauthPollTokenRouteImport.update({
   id: '/api/oauth/poll-token',
   path: '/api/oauth/poll-token',
@@ -1002,11 +1069,13 @@ export interface FileRoutesByFullPath {
   '/files': typeof FilesRoute
   '/hermes-world': typeof HermesWorldRoute
   '/jobs': typeof JobsRoute
+  '/marketing': typeof MarketingRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
   '/operations': typeof OperationsRoute
   '/playground': typeof PlaygroundRoute
   '/profiles': typeof ProfilesRoute
+  '/research': typeof ResearchRoute
   '/reserve': typeof ReserveRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/skills': typeof SkillsRoute
@@ -1014,6 +1083,7 @@ export interface FileRoutesByFullPath {
   '/swarm2': typeof Swarm2Route
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
+  '/training': typeof TrainingRoute
   '/vt-capital': typeof VtCapitalRoute
   '/world': typeof WorldRoute
   '/api/agent-bus': typeof ApiAgentBusRoute
@@ -1047,6 +1117,9 @@ export interface FileRoutesByFullPath {
   '/api/media': typeof ApiMediaRoute
   '/api/memory': typeof ApiMemoryRouteWithChildren
   '/api/models': typeof ApiModelsRoute
+  '/api/openbrain-stats': typeof ApiOpenbrainStatsRoute
+  '/api/openengine-probe': typeof ApiOpenengineProbeRoute
+  '/api/openengine-work-items': typeof ApiOpenengineWorkItemsRouteWithChildren
   '/api/paths': typeof ApiPathsRoute
   '/api/ping': typeof ApiPingRoute
   '/api/playground-admin': typeof ApiPlaygroundAdminRoute
@@ -1083,6 +1156,7 @@ export interface FileRoutesByFullPath {
   '/api/swarm-tmux-start': typeof ApiSwarmTmuxStartRoute
   '/api/swarm-tmux-stop': typeof ApiSwarmTmuxStopRoute
   '/api/system-metrics': typeof ApiSystemMetricsRoute
+  '/api/telegram-topic-create': typeof ApiTelegramTopicCreateRoute
   '/api/telegram-topic-name': typeof ApiTelegramTopicNameRoute
   '/api/telegram-workstreams': typeof ApiTelegramWorkstreamsRoute
   '/api/terminal-close': typeof ApiTerminalCloseRoute
@@ -1127,6 +1201,7 @@ export interface FileRoutesByFullPath {
   '/api/model/info': typeof ApiModelInfoRoute
   '/api/oauth/device-code': typeof ApiOauthDeviceCodeRoute
   '/api/oauth/poll-token': typeof ApiOauthPollTokenRoute
+  '/api/openengine-work-items/$id': typeof ApiOpenengineWorkItemsIdRoute
   '/api/profiles/activate': typeof ApiProfilesActivateRoute
   '/api/profiles/create': typeof ApiProfilesCreateRoute
   '/api/profiles/delete': typeof ApiProfilesDeleteRoute
@@ -1136,6 +1211,9 @@ export interface FileRoutesByFullPath {
   '/api/profiles/skills': typeof ApiProfilesSkillsRoute
   '/api/profiles/toggle-skill': typeof ApiProfilesToggleSkillRoute
   '/api/profiles/update': typeof ApiProfilesUpdateRoute
+  '/api/research/list': typeof ApiResearchListRoute
+  '/api/research/read': typeof ApiResearchReadRoute
+  '/api/research/search': typeof ApiResearchSearchRoute
   '/api/runs/active': typeof ApiRunsActiveRoute
   '/api/sessions/search': typeof ApiSessionsSearchRoute
   '/api/sessions/send': typeof ApiSessionsSendRoute
@@ -1166,17 +1244,20 @@ export interface FileRoutesByTo {
   '/files': typeof FilesRoute
   '/hermes-world': typeof HermesWorldRoute
   '/jobs': typeof JobsRoute
+  '/marketing': typeof MarketingRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
   '/operations': typeof OperationsRoute
   '/playground': typeof PlaygroundRoute
   '/profiles': typeof ProfilesRoute
+  '/research': typeof ResearchRoute
   '/reserve': typeof ReserveRouteWithChildren
   '/skills': typeof SkillsRoute
   '/swarm': typeof SwarmRoute
   '/swarm2': typeof Swarm2Route
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
+  '/training': typeof TrainingRoute
   '/vt-capital': typeof VtCapitalRoute
   '/world': typeof WorldRoute
   '/api/agent-bus': typeof ApiAgentBusRoute
@@ -1210,6 +1291,9 @@ export interface FileRoutesByTo {
   '/api/media': typeof ApiMediaRoute
   '/api/memory': typeof ApiMemoryRouteWithChildren
   '/api/models': typeof ApiModelsRoute
+  '/api/openbrain-stats': typeof ApiOpenbrainStatsRoute
+  '/api/openengine-probe': typeof ApiOpenengineProbeRoute
+  '/api/openengine-work-items': typeof ApiOpenengineWorkItemsRouteWithChildren
   '/api/paths': typeof ApiPathsRoute
   '/api/ping': typeof ApiPingRoute
   '/api/playground-admin': typeof ApiPlaygroundAdminRoute
@@ -1246,6 +1330,7 @@ export interface FileRoutesByTo {
   '/api/swarm-tmux-start': typeof ApiSwarmTmuxStartRoute
   '/api/swarm-tmux-stop': typeof ApiSwarmTmuxStopRoute
   '/api/system-metrics': typeof ApiSystemMetricsRoute
+  '/api/telegram-topic-create': typeof ApiTelegramTopicCreateRoute
   '/api/telegram-topic-name': typeof ApiTelegramTopicNameRoute
   '/api/telegram-workstreams': typeof ApiTelegramWorkstreamsRoute
   '/api/terminal-close': typeof ApiTerminalCloseRoute
@@ -1290,6 +1375,7 @@ export interface FileRoutesByTo {
   '/api/model/info': typeof ApiModelInfoRoute
   '/api/oauth/device-code': typeof ApiOauthDeviceCodeRoute
   '/api/oauth/poll-token': typeof ApiOauthPollTokenRoute
+  '/api/openengine-work-items/$id': typeof ApiOpenengineWorkItemsIdRoute
   '/api/profiles/activate': typeof ApiProfilesActivateRoute
   '/api/profiles/create': typeof ApiProfilesCreateRoute
   '/api/profiles/delete': typeof ApiProfilesDeleteRoute
@@ -1299,6 +1385,9 @@ export interface FileRoutesByTo {
   '/api/profiles/skills': typeof ApiProfilesSkillsRoute
   '/api/profiles/toggle-skill': typeof ApiProfilesToggleSkillRoute
   '/api/profiles/update': typeof ApiProfilesUpdateRoute
+  '/api/research/list': typeof ApiResearchListRoute
+  '/api/research/read': typeof ApiResearchReadRoute
+  '/api/research/search': typeof ApiResearchSearchRoute
   '/api/runs/active': typeof ApiRunsActiveRoute
   '/api/sessions/search': typeof ApiSessionsSearchRoute
   '/api/sessions/send': typeof ApiSessionsSendRoute
@@ -1330,11 +1419,13 @@ export interface FileRoutesById {
   '/files': typeof FilesRoute
   '/hermes-world': typeof HermesWorldRoute
   '/jobs': typeof JobsRoute
+  '/marketing': typeof MarketingRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
   '/operations': typeof OperationsRoute
   '/playground': typeof PlaygroundRoute
   '/profiles': typeof ProfilesRoute
+  '/research': typeof ResearchRoute
   '/reserve': typeof ReserveRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/skills': typeof SkillsRoute
@@ -1342,6 +1433,7 @@ export interface FileRoutesById {
   '/swarm2': typeof Swarm2Route
   '/tasks': typeof TasksRoute
   '/terminal': typeof TerminalRoute
+  '/training': typeof TrainingRoute
   '/vt-capital': typeof VtCapitalRoute
   '/world': typeof WorldRoute
   '/api/agent-bus': typeof ApiAgentBusRoute
@@ -1375,6 +1467,9 @@ export interface FileRoutesById {
   '/api/media': typeof ApiMediaRoute
   '/api/memory': typeof ApiMemoryRouteWithChildren
   '/api/models': typeof ApiModelsRoute
+  '/api/openbrain-stats': typeof ApiOpenbrainStatsRoute
+  '/api/openengine-probe': typeof ApiOpenengineProbeRoute
+  '/api/openengine-work-items': typeof ApiOpenengineWorkItemsRouteWithChildren
   '/api/paths': typeof ApiPathsRoute
   '/api/ping': typeof ApiPingRoute
   '/api/playground-admin': typeof ApiPlaygroundAdminRoute
@@ -1411,6 +1506,7 @@ export interface FileRoutesById {
   '/api/swarm-tmux-start': typeof ApiSwarmTmuxStartRoute
   '/api/swarm-tmux-stop': typeof ApiSwarmTmuxStopRoute
   '/api/system-metrics': typeof ApiSystemMetricsRoute
+  '/api/telegram-topic-create': typeof ApiTelegramTopicCreateRoute
   '/api/telegram-topic-name': typeof ApiTelegramTopicNameRoute
   '/api/telegram-workstreams': typeof ApiTelegramWorkstreamsRoute
   '/api/terminal-close': typeof ApiTerminalCloseRoute
@@ -1455,6 +1551,7 @@ export interface FileRoutesById {
   '/api/model/info': typeof ApiModelInfoRoute
   '/api/oauth/device-code': typeof ApiOauthDeviceCodeRoute
   '/api/oauth/poll-token': typeof ApiOauthPollTokenRoute
+  '/api/openengine-work-items/$id': typeof ApiOpenengineWorkItemsIdRoute
   '/api/profiles/activate': typeof ApiProfilesActivateRoute
   '/api/profiles/create': typeof ApiProfilesCreateRoute
   '/api/profiles/delete': typeof ApiProfilesDeleteRoute
@@ -1464,6 +1561,9 @@ export interface FileRoutesById {
   '/api/profiles/skills': typeof ApiProfilesSkillsRoute
   '/api/profiles/toggle-skill': typeof ApiProfilesToggleSkillRoute
   '/api/profiles/update': typeof ApiProfilesUpdateRoute
+  '/api/research/list': typeof ApiResearchListRoute
+  '/api/research/read': typeof ApiResearchReadRoute
+  '/api/research/search': typeof ApiResearchSearchRoute
   '/api/runs/active': typeof ApiRunsActiveRoute
   '/api/sessions/search': typeof ApiSessionsSearchRoute
   '/api/sessions/send': typeof ApiSessionsSendRoute
@@ -1496,11 +1596,13 @@ export interface FileRouteTypes {
     | '/files'
     | '/hermes-world'
     | '/jobs'
+    | '/marketing'
     | '/mcp'
     | '/memory'
     | '/operations'
     | '/playground'
     | '/profiles'
+    | '/research'
     | '/reserve'
     | '/settings'
     | '/skills'
@@ -1508,6 +1610,7 @@ export interface FileRouteTypes {
     | '/swarm2'
     | '/tasks'
     | '/terminal'
+    | '/training'
     | '/vt-capital'
     | '/world'
     | '/api/agent-bus'
@@ -1541,6 +1644,9 @@ export interface FileRouteTypes {
     | '/api/media'
     | '/api/memory'
     | '/api/models'
+    | '/api/openbrain-stats'
+    | '/api/openengine-probe'
+    | '/api/openengine-work-items'
     | '/api/paths'
     | '/api/ping'
     | '/api/playground-admin'
@@ -1577,6 +1683,7 @@ export interface FileRouteTypes {
     | '/api/swarm-tmux-start'
     | '/api/swarm-tmux-stop'
     | '/api/system-metrics'
+    | '/api/telegram-topic-create'
     | '/api/telegram-topic-name'
     | '/api/telegram-workstreams'
     | '/api/terminal-close'
@@ -1621,6 +1728,7 @@ export interface FileRouteTypes {
     | '/api/model/info'
     | '/api/oauth/device-code'
     | '/api/oauth/poll-token'
+    | '/api/openengine-work-items/$id'
     | '/api/profiles/activate'
     | '/api/profiles/create'
     | '/api/profiles/delete'
@@ -1630,6 +1738,9 @@ export interface FileRouteTypes {
     | '/api/profiles/skills'
     | '/api/profiles/toggle-skill'
     | '/api/profiles/update'
+    | '/api/research/list'
+    | '/api/research/read'
+    | '/api/research/search'
     | '/api/runs/active'
     | '/api/sessions/search'
     | '/api/sessions/send'
@@ -1660,17 +1771,20 @@ export interface FileRouteTypes {
     | '/files'
     | '/hermes-world'
     | '/jobs'
+    | '/marketing'
     | '/mcp'
     | '/memory'
     | '/operations'
     | '/playground'
     | '/profiles'
+    | '/research'
     | '/reserve'
     | '/skills'
     | '/swarm'
     | '/swarm2'
     | '/tasks'
     | '/terminal'
+    | '/training'
     | '/vt-capital'
     | '/world'
     | '/api/agent-bus'
@@ -1704,6 +1818,9 @@ export interface FileRouteTypes {
     | '/api/media'
     | '/api/memory'
     | '/api/models'
+    | '/api/openbrain-stats'
+    | '/api/openengine-probe'
+    | '/api/openengine-work-items'
     | '/api/paths'
     | '/api/ping'
     | '/api/playground-admin'
@@ -1740,6 +1857,7 @@ export interface FileRouteTypes {
     | '/api/swarm-tmux-start'
     | '/api/swarm-tmux-stop'
     | '/api/system-metrics'
+    | '/api/telegram-topic-create'
     | '/api/telegram-topic-name'
     | '/api/telegram-workstreams'
     | '/api/terminal-close'
@@ -1784,6 +1902,7 @@ export interface FileRouteTypes {
     | '/api/model/info'
     | '/api/oauth/device-code'
     | '/api/oauth/poll-token'
+    | '/api/openengine-work-items/$id'
     | '/api/profiles/activate'
     | '/api/profiles/create'
     | '/api/profiles/delete'
@@ -1793,6 +1912,9 @@ export interface FileRouteTypes {
     | '/api/profiles/skills'
     | '/api/profiles/toggle-skill'
     | '/api/profiles/update'
+    | '/api/research/list'
+    | '/api/research/read'
+    | '/api/research/search'
     | '/api/runs/active'
     | '/api/sessions/search'
     | '/api/sessions/send'
@@ -1823,11 +1945,13 @@ export interface FileRouteTypes {
     | '/files'
     | '/hermes-world'
     | '/jobs'
+    | '/marketing'
     | '/mcp'
     | '/memory'
     | '/operations'
     | '/playground'
     | '/profiles'
+    | '/research'
     | '/reserve'
     | '/settings'
     | '/skills'
@@ -1835,6 +1959,7 @@ export interface FileRouteTypes {
     | '/swarm2'
     | '/tasks'
     | '/terminal'
+    | '/training'
     | '/vt-capital'
     | '/world'
     | '/api/agent-bus'
@@ -1868,6 +1993,9 @@ export interface FileRouteTypes {
     | '/api/media'
     | '/api/memory'
     | '/api/models'
+    | '/api/openbrain-stats'
+    | '/api/openengine-probe'
+    | '/api/openengine-work-items'
     | '/api/paths'
     | '/api/ping'
     | '/api/playground-admin'
@@ -1904,6 +2032,7 @@ export interface FileRouteTypes {
     | '/api/swarm-tmux-start'
     | '/api/swarm-tmux-stop'
     | '/api/system-metrics'
+    | '/api/telegram-topic-create'
     | '/api/telegram-topic-name'
     | '/api/telegram-workstreams'
     | '/api/terminal-close'
@@ -1948,6 +2077,7 @@ export interface FileRouteTypes {
     | '/api/model/info'
     | '/api/oauth/device-code'
     | '/api/oauth/poll-token'
+    | '/api/openengine-work-items/$id'
     | '/api/profiles/activate'
     | '/api/profiles/create'
     | '/api/profiles/delete'
@@ -1957,6 +2087,9 @@ export interface FileRouteTypes {
     | '/api/profiles/skills'
     | '/api/profiles/toggle-skill'
     | '/api/profiles/update'
+    | '/api/research/list'
+    | '/api/research/read'
+    | '/api/research/search'
     | '/api/runs/active'
     | '/api/sessions/search'
     | '/api/sessions/send'
@@ -1988,11 +2121,13 @@ export interface RootRouteChildren {
   FilesRoute: typeof FilesRoute
   HermesWorldRoute: typeof HermesWorldRoute
   JobsRoute: typeof JobsRoute
+  MarketingRoute: typeof MarketingRoute
   McpRoute: typeof McpRoute
   MemoryRoute: typeof MemoryRoute
   OperationsRoute: typeof OperationsRoute
   PlaygroundRoute: typeof PlaygroundRoute
   ProfilesRoute: typeof ProfilesRoute
+  ResearchRoute: typeof ResearchRoute
   ReserveRoute: typeof ReserveRouteWithChildren
   SettingsRoute: typeof SettingsRouteWithChildren
   SkillsRoute: typeof SkillsRoute
@@ -2000,6 +2135,7 @@ export interface RootRouteChildren {
   Swarm2Route: typeof Swarm2Route
   TasksRoute: typeof TasksRoute
   TerminalRoute: typeof TerminalRoute
+  TrainingRoute: typeof TrainingRoute
   VtCapitalRoute: typeof VtCapitalRoute
   WorldRoute: typeof WorldRoute
   ApiAgentBusRoute: typeof ApiAgentBusRoute
@@ -2033,6 +2169,9 @@ export interface RootRouteChildren {
   ApiMediaRoute: typeof ApiMediaRoute
   ApiMemoryRoute: typeof ApiMemoryRouteWithChildren
   ApiModelsRoute: typeof ApiModelsRoute
+  ApiOpenbrainStatsRoute: typeof ApiOpenbrainStatsRoute
+  ApiOpenengineProbeRoute: typeof ApiOpenengineProbeRoute
+  ApiOpenengineWorkItemsRoute: typeof ApiOpenengineWorkItemsRouteWithChildren
   ApiPathsRoute: typeof ApiPathsRoute
   ApiPingRoute: typeof ApiPingRoute
   ApiPlaygroundAdminRoute: typeof ApiPlaygroundAdminRoute
@@ -2069,6 +2208,7 @@ export interface RootRouteChildren {
   ApiSwarmTmuxStartRoute: typeof ApiSwarmTmuxStartRoute
   ApiSwarmTmuxStopRoute: typeof ApiSwarmTmuxStopRoute
   ApiSystemMetricsRoute: typeof ApiSystemMetricsRoute
+  ApiTelegramTopicCreateRoute: typeof ApiTelegramTopicCreateRoute
   ApiTelegramTopicNameRoute: typeof ApiTelegramTopicNameRoute
   ApiTelegramWorkstreamsRoute: typeof ApiTelegramWorkstreamsRoute
   ApiTerminalCloseRoute: typeof ApiTerminalCloseRoute
@@ -2104,6 +2244,9 @@ export interface RootRouteChildren {
   ApiProfilesSkillsRoute: typeof ApiProfilesSkillsRoute
   ApiProfilesToggleSkillRoute: typeof ApiProfilesToggleSkillRoute
   ApiProfilesUpdateRoute: typeof ApiProfilesUpdateRoute
+  ApiResearchListRoute: typeof ApiResearchListRoute
+  ApiResearchReadRoute: typeof ApiResearchReadRoute
+  ApiResearchSearchRoute: typeof ApiResearchSearchRoute
   ApiRunsActiveRoute: typeof ApiRunsActiveRoute
   ApiUpdateAgentRoute: typeof ApiUpdateAgentRoute
   ApiUpdateStatusRoute: typeof ApiUpdateStatusRoute
@@ -2125,6 +2268,13 @@ declare module '@tanstack/react-router' {
       path: '/vt-capital'
       fullPath: '/vt-capital'
       preLoaderRoute: typeof VtCapitalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/training': {
+      id: '/training'
+      path: '/training'
+      fullPath: '/training'
+      preLoaderRoute: typeof TrainingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terminal': {
@@ -2176,6 +2326,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReserveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/research': {
+      id: '/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof ResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profiles': {
       id: '/profiles'
       path: '/profiles'
@@ -2209,6 +2366,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing': {
+      id: '/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof MarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs': {
@@ -2377,6 +2541,13 @@ declare module '@tanstack/react-router' {
       path: '/api/telegram-topic-name'
       fullPath: '/api/telegram-topic-name'
       preLoaderRoute: typeof ApiTelegramTopicNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/telegram-topic-create': {
+      id: '/api/telegram-topic-create'
+      path: '/api/telegram-topic-create'
+      fullPath: '/api/telegram-topic-create'
+      preLoaderRoute: typeof ApiTelegramTopicCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/system-metrics': {
@@ -2629,6 +2800,27 @@ declare module '@tanstack/react-router' {
       path: '/api/paths'
       fullPath: '/api/paths'
       preLoaderRoute: typeof ApiPathsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/openengine-work-items': {
+      id: '/api/openengine-work-items'
+      path: '/api/openengine-work-items'
+      fullPath: '/api/openengine-work-items'
+      preLoaderRoute: typeof ApiOpenengineWorkItemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/openengine-probe': {
+      id: '/api/openengine-probe'
+      path: '/api/openengine-probe'
+      fullPath: '/api/openengine-probe'
+      preLoaderRoute: typeof ApiOpenengineProbeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/openbrain-stats': {
+      id: '/api/openbrain-stats'
+      path: '/api/openbrain-stats'
+      fullPath: '/api/openbrain-stats'
+      preLoaderRoute: typeof ApiOpenbrainStatsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/models': {
@@ -2932,6 +3124,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRunsActiveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/research/search': {
+      id: '/api/research/search'
+      path: '/api/research/search'
+      fullPath: '/api/research/search'
+      preLoaderRoute: typeof ApiResearchSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/research/read': {
+      id: '/api/research/read'
+      path: '/api/research/read'
+      fullPath: '/api/research/read'
+      preLoaderRoute: typeof ApiResearchReadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/research/list': {
+      id: '/api/research/list'
+      path: '/api/research/list'
+      fullPath: '/api/research/list'
+      preLoaderRoute: typeof ApiResearchListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/profiles/update': {
       id: '/api/profiles/update'
       path: '/api/profiles/update'
@@ -2994,6 +3207,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/profiles/activate'
       preLoaderRoute: typeof ApiProfilesActivateRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/openengine-work-items/$id': {
+      id: '/api/openengine-work-items/$id'
+      path: '/$id'
+      fullPath: '/api/openengine-work-items/$id'
+      preLoaderRoute: typeof ApiOpenengineWorkItemsIdRouteImport
+      parentRoute: typeof ApiOpenengineWorkItemsRoute
     }
     '/api/oauth/poll-token': {
       id: '/api/oauth/poll-token'
@@ -3387,6 +3607,20 @@ const ApiMemoryRouteWithChildren = ApiMemoryRoute._addFileChildren(
   ApiMemoryRouteChildren,
 )
 
+interface ApiOpenengineWorkItemsRouteChildren {
+  ApiOpenengineWorkItemsIdRoute: typeof ApiOpenengineWorkItemsIdRoute
+}
+
+const ApiOpenengineWorkItemsRouteChildren: ApiOpenengineWorkItemsRouteChildren =
+  {
+    ApiOpenengineWorkItemsIdRoute: ApiOpenengineWorkItemsIdRoute,
+  }
+
+const ApiOpenengineWorkItemsRouteWithChildren =
+  ApiOpenengineWorkItemsRoute._addFileChildren(
+    ApiOpenengineWorkItemsRouteChildren,
+  )
+
 interface ApiSessionsRouteChildren {
   ApiSessionsSearchRoute: typeof ApiSessionsSearchRoute
   ApiSessionsSendRoute: typeof ApiSessionsSendRoute
@@ -3473,11 +3707,13 @@ const rootRouteChildren: RootRouteChildren = {
   FilesRoute: FilesRoute,
   HermesWorldRoute: HermesWorldRoute,
   JobsRoute: JobsRoute,
+  MarketingRoute: MarketingRoute,
   McpRoute: McpRoute,
   MemoryRoute: MemoryRoute,
   OperationsRoute: OperationsRoute,
   PlaygroundRoute: PlaygroundRoute,
   ProfilesRoute: ProfilesRoute,
+  ResearchRoute: ResearchRoute,
   ReserveRoute: ReserveRouteWithChildren,
   SettingsRoute: SettingsRouteWithChildren,
   SkillsRoute: SkillsRoute,
@@ -3485,6 +3721,7 @@ const rootRouteChildren: RootRouteChildren = {
   Swarm2Route: Swarm2Route,
   TasksRoute: TasksRoute,
   TerminalRoute: TerminalRoute,
+  TrainingRoute: TrainingRoute,
   VtCapitalRoute: VtCapitalRoute,
   WorldRoute: WorldRoute,
   ApiAgentBusRoute: ApiAgentBusRoute,
@@ -3518,6 +3755,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMediaRoute: ApiMediaRoute,
   ApiMemoryRoute: ApiMemoryRouteWithChildren,
   ApiModelsRoute: ApiModelsRoute,
+  ApiOpenbrainStatsRoute: ApiOpenbrainStatsRoute,
+  ApiOpenengineProbeRoute: ApiOpenengineProbeRoute,
+  ApiOpenengineWorkItemsRoute: ApiOpenengineWorkItemsRouteWithChildren,
   ApiPathsRoute: ApiPathsRoute,
   ApiPingRoute: ApiPingRoute,
   ApiPlaygroundAdminRoute: ApiPlaygroundAdminRoute,
@@ -3554,6 +3794,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSwarmTmuxStartRoute: ApiSwarmTmuxStartRoute,
   ApiSwarmTmuxStopRoute: ApiSwarmTmuxStopRoute,
   ApiSystemMetricsRoute: ApiSystemMetricsRoute,
+  ApiTelegramTopicCreateRoute: ApiTelegramTopicCreateRoute,
   ApiTelegramTopicNameRoute: ApiTelegramTopicNameRoute,
   ApiTelegramWorkstreamsRoute: ApiTelegramWorkstreamsRoute,
   ApiTerminalCloseRoute: ApiTerminalCloseRoute,
@@ -3589,6 +3830,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiProfilesSkillsRoute: ApiProfilesSkillsRoute,
   ApiProfilesToggleSkillRoute: ApiProfilesToggleSkillRoute,
   ApiProfilesUpdateRoute: ApiProfilesUpdateRoute,
+  ApiResearchListRoute: ApiResearchListRoute,
+  ApiResearchReadRoute: ApiResearchReadRoute,
+  ApiResearchSearchRoute: ApiResearchSearchRoute,
   ApiRunsActiveRoute: ApiRunsActiveRoute,
   ApiUpdateAgentRoute: ApiUpdateAgentRoute,
   ApiUpdateStatusRoute: ApiUpdateStatusRoute,

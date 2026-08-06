@@ -66,6 +66,7 @@ type Notes = {
 }
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000
+const INITIAL_CHECK_DELAY_MS = 15_000
 const DISMISS_PREFIX = 'hermes-update-v2-dismissed:'
 const NOTES_KEY = 'hermes-update-v2-release-notes'
 const NOTES_SEEN_KEY = 'hermes-update-v2-release-notes-seen'
@@ -114,6 +115,7 @@ function storeNotes(sections: Array<ReleaseNoteSection>): Notes | null {
 
 export function UpdateCenterNotifier() {
   const queryClient = useQueryClient()
+  const [checkEnabled, setCheckEnabled] = useState(false)
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set())
   const [phases, setPhases] = useState<Record<ProductId, Phase>>({
     workspace: 'idle',
@@ -137,6 +139,14 @@ export function UpdateCenterNotifier() {
     // status poll should not interrupt users with stale "what changed" copy.
   }, [])
 
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setCheckEnabled(true),
+      INITIAL_CHECK_DELAY_MS,
+    )
+    return () => window.clearTimeout(timer)
+  }, [])
+
   const { data } = useQuery({
     queryKey: ['update-status-v2'],
     queryFn: async () => {
@@ -147,6 +157,7 @@ export function UpdateCenterNotifier() {
     refetchInterval: CHECK_INTERVAL_MS,
     staleTime: CHECK_INTERVAL_MS,
     retry: false,
+    enabled: checkEnabled,
   })
 
   useEffect(() => {
