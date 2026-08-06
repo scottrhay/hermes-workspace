@@ -15,6 +15,7 @@ import {
   Tick02Icon,
 } from '@hugeicons/core-free-icons'
 import {
+  bindTelegramTopic,
   createTelegramTopic,
   fetchTelegramWorkstreams,
   filterTelegramWorkstreams,
@@ -69,6 +70,9 @@ function TopicStatus({ workstream }: { workstream: TelegramWorkstream }) {
 
 function AttentionCard({ workstream }: { workstream: TelegramWorkstream }) {
   const state = getWorkstreamState(workstream)
+  // Only bound workstreams reach this card (it filters on activity), but guard
+  // anyway so an unbound topic can never render a link to an empty session id.
+  if (!workstream.sessionId) return null
   return (
     <Link
       to="/chat/$sessionKey"
@@ -126,8 +130,46 @@ function topicRenameOutcomeMessage(result: {
   }
 }
 
+/**
+ * Opens a workstream, creating its Hermes session first when the topic came
+ * from Telegram and has never been messaged from here. Without this an
+ * enumerated-but-unbound topic links to an empty session id.
+ */
+function useOpenWorkstream(workstream: TelegramWorkstream) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const bindMutation = useMutation({
+    mutationFn: bindTelegramTopic,
+    onSuccess: async (topic) => {
+      await queryClient.invalidateQueries({ queryKey: telegramWorkstreamQueryKey })
+      await navigate({
+        to: '/chat/$sessionKey',
+        params: { sessionKey: topic.sessionId },
+      })
+    },
+    onError: (error) => {
+      toast(error instanceof Error ? error.message : 'Failed to open topic', {
+        type: 'error',
+      })
+    },
+  })
+
+  return {
+    isBound: Boolean(workstream.sessionId),
+    isOpening: bindMutation.isPending,
+    open: () => {
+      if (workstream.sessionId || bindMutation.isPending) return
+      bindMutation.mutate({
+        chatId: workstream.chatId,
+        topicId: workstream.topicId,
+      })
+    },
+  }
+}
+
 function TopicChip({ workstream }: { workstream: TelegramWorkstream }) {
   const queryClient = useQueryClient()
+  const { isBound, isOpening, open } = useOpenWorkstream(workstream)
   const [isEditing, setIsEditing] = useState(false)
   const [value, setValue] = useState(workstream.title)
 
@@ -209,25 +251,41 @@ function TopicChip({ workstream }: { workstream: TelegramWorkstream }) {
 
   return (
     <div className="group inline-flex max-w-full items-center gap-0.5 rounded-lg border border-primary-200 bg-primary-100/60 pl-2.5 pr-1 py-1.5 text-xs font-medium text-primary-800 transition hover:border-accent-500/50 hover:bg-accent-500/10">
-      <Link
-        to="/chat/$sessionKey"
-        params={{ sessionKey: workstream.sessionId }}
-        className="inline-flex min-w-0 flex-1 items-center gap-1.5 hover:text-accent-500"
-        title={`${workstream.title} · Topic #${workstream.topicId} · ${workstream.messageCount} total messages`}
-      >
-        <span
-          className={cn(
-            'size-1.5 shrink-0 rounded-full',
-            workstream.isActive ? 'animate-pulse bg-sky-500' : 'bg-primary-300',
-          )}
-        />
-        <span className="truncate">{workstream.title}</span>
-        {workstream.messageCount > 0 ? (
-          <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-600 px-1.5 py-0.5 text-[9px] font-bold text-white">
-            {workstream.messageCount.toLocaleString()}
+      {isBound ? (
+        <Link
+          to="/chat/$sessionKey"
+          params={{ sessionKey: workstream.sessionId }}
+          className="inline-flex min-w-0 flex-1 items-center gap-1.5 hover:text-accent-500"
+          title={`${workstream.title} · Topic #${workstream.topicId} · ${workstream.messageCount} total messages`}
+        >
+          <span
+            className={cn(
+              'size-1.5 shrink-0 rounded-full',
+              workstream.isActive ? 'animate-pulse bg-sky-500' : 'bg-primary-300',
+            )}
+          />
+          <span className="truncate">{workstream.title}</span>
+          {workstream.messageCount > 0 ? (
+            <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-600 px-1.5 py-0.5 text-[9px] font-bold text-white">
+              {workstream.messageCount.toLocaleString()}
+            </span>
+          ) : null}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={open}
+          disabled={isOpening}
+          className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-accent-500 disabled:opacity-60"
+          title={`${workstream.title} · Topic #${workstream.topicId} · not opened here yet`}
+        >
+          <span className="size-1.5 shrink-0 rounded-full border border-primary-300" />
+          <span className="truncate">{workstream.title}</span>
+          <span className="shrink-0 text-[9px] font-medium text-primary-400">
+            {isOpening ? 'opening…' : 'new'}
           </span>
-        ) : null}
-      </Link>
+        </button>
+      )}
       <button
         type="button"
         onClick={startEditing}

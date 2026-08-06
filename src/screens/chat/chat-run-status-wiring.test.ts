@@ -33,6 +33,27 @@ describe('Mission Control live run status wiring', () => {
     expect(statusSource).toContain('var(--chat-composer-height')
   })
 
+  it('keeps the activity toggle mounted while expanded so it can be closed', async () => {
+    // The toggle used to render only when activityRows was non-empty, so an
+    // emptying list mid-run removed the control and left the panel open with
+    // no way to collapse it — reported from mobile.
+    const statusSource = await source(statusUrl)
+
+    expect(statusSource).toContain('activityRows.length > 0 || expanded')
+    expect(statusSource).toContain("{expanded ? 'Hide' :")
+  })
+
+  it('keeps the run status visible for a run this tab started', async () => {
+    // A Telegram workstream hands the stream off, which re-armed the stale
+    // sessionStorage guard and hid the status on the sending device while a
+    // freshly-opened second device still showed it.
+    const screen = await source(screenUrl)
+
+    expect(screen).toContain('startedRunThisMountRef')
+    expect(screen).toContain('!startedRunThisMountRef.current.has(key)')
+    expect(screen).toContain('startedRunThisMountRef.current.add(key)')
+  })
+
   it('reports the current real lifecycle activity instead of a cosmetic timer', () => {
     const derive = deriveChatRunStatus as unknown as (
       input: Record<string, unknown>,

@@ -75,6 +75,32 @@ export async function createTelegramTopic(input: {
   return payload.topic
 }
 
+/**
+ * Opens a Hermes session for a Telegram topic that does not have one.
+ *
+ * Enumeration surfaces every topic in a forum, including ones created in the
+ * Telegram app that no session has ever been started for. Those have nothing
+ * to navigate to until this runs.
+ */
+export async function bindTelegramTopic(input: {
+  chatId: string
+  topicId: string
+}): Promise<CreatedTelegramTopic> {
+  const response = await fetch('/api/telegram-topic-bind', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  const payload = (await response.json().catch(() => ({}))) as {
+    topic?: CreatedTelegramTopic
+    error?: string
+  }
+  if (!response.ok || !payload.topic) {
+    throw new Error(payload.error || 'Failed to open this Telegram topic')
+  }
+  return payload.topic
+}
+
 export async function renameTelegramTopic(input: {
   chatId: string
   topicId: string

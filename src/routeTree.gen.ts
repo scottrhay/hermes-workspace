@@ -51,6 +51,7 @@ import { Route as ApiTerminalCloseRouteImport } from './routes/api/terminal-clos
 import { Route as ApiTelegramWorkstreamsRouteImport } from './routes/api/telegram-workstreams'
 import { Route as ApiTelegramTopicNameRouteImport } from './routes/api/telegram-topic-name'
 import { Route as ApiTelegramTopicCreateRouteImport } from './routes/api/telegram-topic-create'
+import { Route as ApiTelegramTopicBindRouteImport } from './routes/api/telegram-topic-bind'
 import { Route as ApiSystemMetricsRouteImport } from './routes/api/system-metrics'
 import { Route as ApiSwarmTmuxStopRouteImport } from './routes/api/swarm-tmux-stop'
 import { Route as ApiSwarmTmuxStartRouteImport } from './routes/api/swarm-tmux-start'
@@ -391,6 +392,11 @@ const ApiTelegramTopicNameRoute = ApiTelegramTopicNameRouteImport.update({
 const ApiTelegramTopicCreateRoute = ApiTelegramTopicCreateRouteImport.update({
   id: '/api/telegram-topic-create',
   path: '/api/telegram-topic-create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTelegramTopicBindRoute = ApiTelegramTopicBindRouteImport.update({
+  id: '/api/telegram-topic-bind',
+  path: '/api/telegram-topic-bind',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSystemMetricsRoute = ApiSystemMetricsRouteImport.update({
@@ -1156,6 +1162,7 @@ export interface FileRoutesByFullPath {
   '/api/swarm-tmux-start': typeof ApiSwarmTmuxStartRoute
   '/api/swarm-tmux-stop': typeof ApiSwarmTmuxStopRoute
   '/api/system-metrics': typeof ApiSystemMetricsRoute
+  '/api/telegram-topic-bind': typeof ApiTelegramTopicBindRoute
   '/api/telegram-topic-create': typeof ApiTelegramTopicCreateRoute
   '/api/telegram-topic-name': typeof ApiTelegramTopicNameRoute
   '/api/telegram-workstreams': typeof ApiTelegramWorkstreamsRoute
@@ -1330,6 +1337,7 @@ export interface FileRoutesByTo {
   '/api/swarm-tmux-start': typeof ApiSwarmTmuxStartRoute
   '/api/swarm-tmux-stop': typeof ApiSwarmTmuxStopRoute
   '/api/system-metrics': typeof ApiSystemMetricsRoute
+  '/api/telegram-topic-bind': typeof ApiTelegramTopicBindRoute
   '/api/telegram-topic-create': typeof ApiTelegramTopicCreateRoute
   '/api/telegram-topic-name': typeof ApiTelegramTopicNameRoute
   '/api/telegram-workstreams': typeof ApiTelegramWorkstreamsRoute
@@ -1506,6 +1514,7 @@ export interface FileRoutesById {
   '/api/swarm-tmux-start': typeof ApiSwarmTmuxStartRoute
   '/api/swarm-tmux-stop': typeof ApiSwarmTmuxStopRoute
   '/api/system-metrics': typeof ApiSystemMetricsRoute
+  '/api/telegram-topic-bind': typeof ApiTelegramTopicBindRoute
   '/api/telegram-topic-create': typeof ApiTelegramTopicCreateRoute
   '/api/telegram-topic-name': typeof ApiTelegramTopicNameRoute
   '/api/telegram-workstreams': typeof ApiTelegramWorkstreamsRoute
@@ -1683,6 +1692,7 @@ export interface FileRouteTypes {
     | '/api/swarm-tmux-start'
     | '/api/swarm-tmux-stop'
     | '/api/system-metrics'
+    | '/api/telegram-topic-bind'
     | '/api/telegram-topic-create'
     | '/api/telegram-topic-name'
     | '/api/telegram-workstreams'
@@ -1857,6 +1867,7 @@ export interface FileRouteTypes {
     | '/api/swarm-tmux-start'
     | '/api/swarm-tmux-stop'
     | '/api/system-metrics'
+    | '/api/telegram-topic-bind'
     | '/api/telegram-topic-create'
     | '/api/telegram-topic-name'
     | '/api/telegram-workstreams'
@@ -2032,6 +2043,7 @@ export interface FileRouteTypes {
     | '/api/swarm-tmux-start'
     | '/api/swarm-tmux-stop'
     | '/api/system-metrics'
+    | '/api/telegram-topic-bind'
     | '/api/telegram-topic-create'
     | '/api/telegram-topic-name'
     | '/api/telegram-workstreams'
@@ -2208,6 +2220,7 @@ export interface RootRouteChildren {
   ApiSwarmTmuxStartRoute: typeof ApiSwarmTmuxStartRoute
   ApiSwarmTmuxStopRoute: typeof ApiSwarmTmuxStopRoute
   ApiSystemMetricsRoute: typeof ApiSystemMetricsRoute
+  ApiTelegramTopicBindRoute: typeof ApiTelegramTopicBindRoute
   ApiTelegramTopicCreateRoute: typeof ApiTelegramTopicCreateRoute
   ApiTelegramTopicNameRoute: typeof ApiTelegramTopicNameRoute
   ApiTelegramWorkstreamsRoute: typeof ApiTelegramWorkstreamsRoute
@@ -2548,6 +2561,13 @@ declare module '@tanstack/react-router' {
       path: '/api/telegram-topic-create'
       fullPath: '/api/telegram-topic-create'
       preLoaderRoute: typeof ApiTelegramTopicCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/telegram-topic-bind': {
+      id: '/api/telegram-topic-bind'
+      path: '/api/telegram-topic-bind'
+      fullPath: '/api/telegram-topic-bind'
+      preLoaderRoute: typeof ApiTelegramTopicBindRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/system-metrics': {
@@ -3794,6 +3814,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSwarmTmuxStartRoute: ApiSwarmTmuxStartRoute,
   ApiSwarmTmuxStopRoute: ApiSwarmTmuxStopRoute,
   ApiSystemMetricsRoute: ApiSystemMetricsRoute,
+  ApiTelegramTopicBindRoute: ApiTelegramTopicBindRoute,
   ApiTelegramTopicCreateRoute: ApiTelegramTopicCreateRoute,
   ApiTelegramTopicNameRoute: ApiTelegramTopicNameRoute,
   ApiTelegramWorkstreamsRoute: ApiTelegramWorkstreamsRoute,

@@ -601,6 +601,10 @@ export function ChatScreen({
   // resolvedSessionKey is now available (defined above from useChatHistory).
   const sessionKeyForWaiting = useRef<string | undefined>(undefined)
   const pendingVerifySessionKeyRef = useRef<string | undefined>(undefined)
+  // Sessions this tab started a run in. Their waiting flag came from a send
+  // we just made, so it is by definition not the stale sessionStorage state
+  // the verification guard below exists to suppress.
+  const startedRunThisMountRef = useRef<Set<string>>(new Set())
 
   // Keep the waiting-state ref in sync with the resolved session key
   sessionKeyForWaiting.current = resolvedSessionKey
@@ -630,10 +634,18 @@ export function ChatScreen({
 
     // If we restored waiting state from sessionStorage but haven't verified
     // with the API yet, don't show thinking — it might be stale (Issue #449).
+    //
+    // This must not fire for a run this tab started. A Telegram workstream
+    // hands the stream off (transitionToHandoff clears isStreaming while the
+    // run continues server-side), which re-arms the verification guard and
+    // silently hid the run status on the sending device — while a second
+    // device, arriving fresh and completing the active-run check, showed it
+    // correctly.
     if (
       storeWaiting.has(key) &&
       pendingVerifySessionKeyRef.current === key &&
-      !activeRunCheckDone
+      !activeRunCheckDone &&
+      !startedRunThisMountRef.current.has(key)
     ) {
       return false
     }
@@ -646,8 +658,12 @@ export function ChatScreen({
     const key = sessionKeyForWaiting.current
     if (!key) return
     if (waiting) {
+      // Single choke point for every send path, so the guard exemption above
+      // cannot drift out of sync with however a run gets started.
+      startedRunThisMountRef.current.add(key)
       store.setSessionWaiting(key)
     } else {
+      startedRunThisMountRef.current.delete(key)
       store.clearSessionWaiting(key)
     }
   }, [])

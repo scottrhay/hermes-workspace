@@ -178,14 +178,17 @@ export function ChatRunStatus({
         <span className="shrink-0 font-mono text-[10px] tabular-nums text-[var(--theme-muted)]">
           {elapsedLabel}
         </span>
-        {activityRows.length > 0 ? (
+        {activityRows.length > 0 || expanded ? (
+          // Stays mounted while expanded even if the activity list empties out
+          // — otherwise the toggle disappears mid-run and the panel can be
+          // opened but never closed.
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
-            className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--theme-accent)] hover:bg-[var(--theme-card2)]"
+            className="-my-1 shrink-0 rounded-md px-2 py-2 text-[11px] font-medium text-[var(--theme-accent)] hover:bg-[var(--theme-card2)]"
             aria-expanded={expanded}
           >
-            Activity {activityRows.length}
+            {expanded ? 'Hide' : `Activity ${activityRows.length}`}
           </button>
         ) : null}
       </div>
