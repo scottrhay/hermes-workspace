@@ -75,6 +75,7 @@ export function SearchModal() {
   const { sessions, sessionSearchResults, files, skills } = useSearchData(
     scope,
     deferredQuery,
+    isOpen,
   )
   const searchableFiles = useMemo(
     () => files.filter((entry) => entry.type === 'file'),

@@ -1,13 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { usePageTitle } from '@/hooks/use-page-title'
-import { DashboardScreen } from '@/screens/dashboard/dashboard-screen'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/dashboard')({
-  ssr: false,
-  component: DashboardRoute,
+  beforeLoad: () => {
+    throw redirect({ to: '/' })
+  },
 })
-
-function DashboardRoute() {
-  usePageTitle('Dashboard')
-  return <DashboardScreen />
-}

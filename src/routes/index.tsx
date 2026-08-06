@@ -1,14 +1,13 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { usePageTitle } from '@/hooks/use-page-title'
+import { DashboardScreen } from '@/screens/dashboard/dashboard-screen'
 
 export const Route = createFileRoute('/')({
   ssr: false,
-  beforeLoad: function redirectToChat() {
-    throw redirect({
-      to: '/chat' as string,
-      replace: true,
-    })
-  },
-  component: function IndexRoute() {
-    return null
-  },
+  component: MissionControlDashboardRoute,
 })
+
+function MissionControlDashboardRoute() {
+  usePageTitle('Mission Control')
+  return <DashboardScreen />
+}
