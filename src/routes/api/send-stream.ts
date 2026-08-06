@@ -23,6 +23,10 @@ import { openaiChat } from '../../server/openai-compat-api'
 import { streamResponses } from '../../server/responses-api'
 import { selectPortableConversationHistory } from '../../server/portable-history'
 import { acquireTelegramSendLock } from '../../server/telegram-send-lock'
+import {
+  findTopicBySessionKey,
+  readTopicDirectory,
+} from '../../server/telegram-topic-directory'
 import { mirrorMessageToTelegramTopic } from '../../server/telegram-mirror'
 import { createTelegramStreamLifecycle } from '../../server/telegram-stream-lifecycle'
 import { createTelegramStreamTerminalHandlers } from '../../server/telegram-stream-terminal'
@@ -43,7 +47,6 @@ import {
   getMessages as getSessionMessagesFromAgent,
   listSessions,
   streamChat,
-  submitSession,
 } from '../../server/claude-api'
 import { loadWorkspaceCatalog } from './workspace'
 import {
@@ -54,6 +57,25 @@ import type {OpenAICompatContentPart, OpenAICompatMessage} from '../../server/op
 // Claude agent runs can take 5+ minutes with complex tool chains
 const SEND_STREAM_RUN_TIMEOUT_MS = 600_000
 const SESSION_BOOTSTRAP_KEYS = new Set(['main', 'new'])
+const TELEGRAM_SESSION_PAGE_SIZE = 100
+const MAX_TELEGRAM_SESSIONS = 1_000
+
+async function listTelegramSessionsForAdmission() {
+  const sessions: Awaited<ReturnType<typeof listSessions>> = []
+  for (
+    let offset = 0;
+    offset < MAX_TELEGRAM_SESSIONS;
+    offset += TELEGRAM_SESSION_PAGE_SIZE
+  ) {
+    const page = await listSessions(TELEGRAM_SESSION_PAGE_SIZE, offset, {
+      source: 'telegram',
+      order: 'recent',
+    })
+    sessions.push(...page)
+    if (page.length < TELEGRAM_SESSION_PAGE_SIZE) break
+  }
+  return sessions
+}
 
 function readString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -393,10 +415,7 @@ export const Route = createFileRoute('/api/send-stream')({
         if (gatewaySessionKey) {
           let telegramSessions: Awaited<ReturnType<typeof listSessions>>
           try {
-            telegramSessions = await listSessions(1_000, 0, {
-              source: 'telegram',
-              order: 'recent',
-            })
+            telegramSessions = await listTelegramSessionsForAdmission()
           } catch (error) {
             console.error('[send-stream] Telegram session lookup failed', error)
             return new Response(
@@ -413,10 +432,15 @@ export const Route = createFileRoute('/api/send-stream')({
           }
 
           const telegramOwnerUserId = getTelegramOwnerUserId()
+          // The directory resolves topics the session rows have not caught up
+          // with yet — a topic created seconds ago is addressable immediately.
+          const directory = readTopicDirectory()
+          const knownTopic = findTopicBySessionKey(gatewaySessionKey)
           const currentWorkstream = resolveAuthorizedTelegramWorkstream(
             telegramSessions,
             gatewaySessionKey,
             telegramOwnerUserId,
+            { directory },
           )
           if (!currentWorkstream) {
             return new Response(
@@ -430,14 +454,17 @@ export const Route = createFileRoute('/api/send-stream')({
               },
             )
           }
-          if (
-            !isAuthorizedTelegramSessionPair(
-              telegramSessions,
-              gatewaySessionKey,
-              requestedConcreteSessionId,
-              telegramOwnerUserId,
-            )
-          ) {
+          const authorizedDashboardPair = isAuthorizedTelegramSessionPair(
+            telegramSessions,
+            gatewaySessionKey,
+            requestedConcreteSessionId,
+            telegramOwnerUserId,
+          )
+          const authorizedCreatedPair = Boolean(
+            knownTopic &&
+              knownTopic.sessionId === requestedConcreteSessionId,
+          )
+          if (!(authorizedDashboardPair || authorizedCreatedPair)) {
             return new Response(
               JSON.stringify({
                 ok: false,
@@ -516,55 +543,6 @@ export const Route = createFileRoute('/api/send-stream')({
           workspaceScope,
         )
 
-        if (gatewaySessionKey) {
-          try {
-            await submitSession(sessionKey, scopedMessage, gatewaySessionKey)
-            if (telegramMirrorTarget) {
-              void mirrorMessageToTelegramTopic(
-                telegramMirrorTarget.chatId,
-                telegramMirrorTarget.topicId,
-                message,
-              ).then((result) => {
-                if (result.status === 'failed') {
-                  console.warn('[send-stream] Telegram mirror failed:', result.telegramError)
-                }
-              })
-            }
-            const headers = buildResolvedSessionHeaders({
-              sessionKey,
-              friendlyId: resolvedFriendlyId,
-            })
-            return new Response(
-              `event: handoff\ndata: ${JSON.stringify({
-                sessionKey,
-                friendlyId: resolvedFriendlyId,
-                status: 'accepted',
-              })}\n\n`,
-              {
-                status: 200,
-                headers: {
-                  ...headers,
-                  'Content-Type': 'text/event-stream',
-                  'Cache-Control': 'no-cache',
-                },
-              },
-            )
-          } catch (error) {
-            console.error('[send-stream] Canonical Telegram submit failed', error)
-            return new Response(
-              JSON.stringify({
-                ok: false,
-                error:
-                  'The Telegram workstream could not accept this message. Retry shortly.',
-              }),
-              {
-                status: 503,
-                headers: { 'Content-Type': 'application/json' },
-              },
-            )
-          }
-        }
-
         let releaseTelegramSendLock: (() => void) | null = null
         if (gatewaySessionKey) {
           releaseTelegramSendLock = acquireTelegramSendLock(gatewaySessionKey)
@@ -581,6 +559,18 @@ export const Route = createFileRoute('/api/send-stream')({
               },
             )
           }
+        }
+
+        if (telegramMirrorTarget) {
+          void mirrorMessageToTelegramTopic(
+            telegramMirrorTarget.chatId,
+            telegramMirrorTarget.topicId,
+            message,
+          ).then((result) => {
+            if (result.status === 'failed') {
+              console.warn('[send-stream] Telegram mirror failed:', result.telegramError)
+            }
+          })
         }
 
         // Create streaming response using the SHARED server connection

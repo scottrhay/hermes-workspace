@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
+  createTelegramTopic,
   filterTelegramWorkstreams,
   groupTelegramWorkstreams,
 } from './telegram-workstreams'
@@ -53,5 +54,38 @@ describe('Telegram workstream presentation', () => {
     expect(filterTelegramWorkstreams(rows, 'EMAIL')).toEqual([rows[2]])
     expect(filterTelegramWorkstreams(rows, '2246')).toEqual([rows[0]])
     expect(filterTelegramWorkstreams(rows, '  ')).toEqual(rows)
+  })
+
+  it('creates a bound Telegram topic through Mission Control', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          topic: {
+            sessionId: 'new-session',
+            sessionKey: 'agent:main:telegram:group:chat-exec:91',
+            chatId: 'chat-exec',
+            groupName: 'Executive Administration',
+            topicId: '91',
+            title: 'New workstream',
+          },
+        }),
+        { status: 201, headers: { 'content-type': 'application/json' } },
+      ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      createTelegramTopic({
+        chatId: 'chat-exec',
+        groupName: 'Executive Administration',
+        name: 'New workstream',
+      }),
+    ).resolves.toMatchObject({ sessionId: 'new-session', topicId: '91' })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/telegram-topic-create',
+      expect.objectContaining({ method: 'POST' }),
+    )
+    vi.unstubAllGlobals()
   })
 })

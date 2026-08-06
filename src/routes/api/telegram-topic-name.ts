@@ -10,9 +10,11 @@ import {
   normalizeTelegramWorkstreams,
 } from '../../server/telegram-workstreams'
 import {
+  confirmTopicNameFromTelegram,
   pushTelegramTopicRename,
   setTopicNameOverride,
 } from '../../server/telegram-topic-names'
+import { readTopicDirectory } from '../../server/telegram-topic-directory'
 import { isAuthenticated } from '../../server/auth-middleware'
 
 type RenameBody = {
@@ -20,6 +22,26 @@ type RenameBody = {
   topicId?: unknown
   name?: unknown
   pushToTelegram?: unknown
+}
+
+const DASHBOARD_PAGE_SIZE = 100
+const MAX_TELEGRAM_SESSIONS = 1_000
+
+async function listTelegramSessionsForRename() {
+  const sessions: Awaited<ReturnType<typeof listSessions>> = []
+  for (
+    let offset = 0;
+    offset < MAX_TELEGRAM_SESSIONS;
+    offset += DASHBOARD_PAGE_SIZE
+  ) {
+    const page = await listSessions(DASHBOARD_PAGE_SIZE, offset, {
+      order: 'recent',
+      source: 'telegram',
+    })
+    sessions.push(...page)
+    if (page.length < DASHBOARD_PAGE_SIZE) break
+  }
+  return sessions
 }
 
 export const Route = createFileRoute('/api/telegram-topic-name')({
@@ -55,13 +77,15 @@ export const Route = createFileRoute('/api/telegram-topic-name')({
             )
           }
 
-          const sessions = await listSessions(1_000, 0, {
-            order: 'recent',
-            source: 'telegram',
-          })
+          const sessions = await listTelegramSessionsForRename()
+          // A topic the directory already knows is renameable even if no
+          // current session row mentions it — absence is not evidence that it
+          // is gone.
           const workstreams = normalizeTelegramWorkstreams(
             sessions,
             getTelegramOwnerUserId(),
+            {},
+            { directory: readTopicDirectory(), includeGeneral: true },
           )
           const authorized = workstreams.some(
             (workstream) =>
@@ -99,6 +123,12 @@ export const Route = createFileRoute('/api/telegram-topic-name')({
           name,
           pushToTelegram,
         )
+        // Telegram now holds this name, so promote the record from a local
+        // fallback to a confirmed one. If the push failed the record stays
+        // local and any name Telegram reports later will take precedence.
+        if (push.status === 'renamed') {
+          confirmTopicNameFromTelegram(chatId, topicId, name)
+        }
         return json({
           ok: true,
           telegram: push.status,

@@ -377,7 +377,105 @@ describe('normalizeTelegramWorkstreams', () => {
     expect(result.find((w) => w.sessionId === 'no-chat-id')?.chatId).toBe('')
   })
 
-  it('prefers a topic name override over origin chat_topic, title, and the numeric fallback', () => {
+  it('drops a topic deleted in Telegram even when a session still references it', () => {
+    // A Hermes session outlives the topic it was started in, so without this
+    // the deleted topic keeps its chip forever behind the orphaned session.
+    const rows = [
+      {
+        id: 'live-session',
+        source: 'telegram',
+        user_id: SCOTT_ID,
+        session_key: 'agent:main:telegram:group:chat-1:466',
+        started_at: 100,
+      },
+      {
+        id: 'orphan-session',
+        source: 'telegram',
+        user_id: SCOTT_ID,
+        session_key: 'agent:main:telegram:group:chat-1:208',
+        started_at: 200,
+      },
+    ]
+
+    const result = normalizeTelegramWorkstreams(rows, SCOTT_ID, {}, {
+      liveTopicsByChat: new Map([['chat-1', new Set(['466'])]]),
+    })
+
+    expect(result.map((workstream) => workstream.topicId)).toEqual(['466'])
+  })
+
+  it('keeps every topic for a chat that was not successfully enumerated', () => {
+    const rows = [
+      {
+        id: 'session-a',
+        source: 'telegram',
+        user_id: SCOTT_ID,
+        session_key: 'agent:main:telegram:group:chat-2:12',
+        started_at: 100,
+      },
+    ]
+
+    // chat-2 is absent from the map — a failed sync must never prune.
+    const result = normalizeTelegramWorkstreams(rows, SCOTT_ID, {}, {
+      liveTopicsByChat: new Map([['chat-1', new Set(['466'])]]),
+    })
+
+    expect(result.map((workstream) => workstream.topicId)).toEqual(['12'])
+  })
+
+  it('lets a name reported by Telegram override a saved local name', () => {
+    // Telegram owns topic titles: tdesktop and tweb both mirror the server's
+    // name rather than holding a local one. A saved name that was never
+    // confirmed by Telegram is a fallback, so a rename made in the Telegram
+    // app can still reach the workspace.
+    const overridden = normalizeTelegramWorkstreams(
+      [
+        {
+          source: 'telegram',
+          user_id: SCOTT_ID,
+          chat_id: 'chat-1',
+          started_at: 100,
+          id: 's-override',
+          session_key: 'key-override',
+          thread_id: '20',
+          origin_json: JSON.stringify({ chat_topic: 'Renamed In Telegram' }),
+          title: 'AI generated title',
+        },
+      ],
+      SCOTT_ID,
+      { 'chat-1:20': 'Stale local name' },
+    )
+    expect(overridden[0].title).toBe('Renamed In Telegram')
+  })
+
+  it('keeps a saved name we pushed to Telegram ahead of an older observation', () => {
+    const result = normalizeTelegramWorkstreams(
+      [
+        {
+          source: 'telegram',
+          user_id: SCOTT_ID,
+          chat_id: 'chat-1',
+          id: 's-confirmed',
+          session_key: 'key-confirmed',
+          thread_id: '20',
+          origin_json: JSON.stringify({ chat_topic: 'Older Telegram Name' }),
+          started_at: 100,
+          last_active: 100,
+        },
+      ],
+      SCOTT_ID,
+      {
+        'chat-1:20': {
+          name: 'Pushed Name',
+          source: 'telegram',
+          updatedAt: 100_001,
+        },
+      },
+    )
+    expect(result[0].title).toBe('Pushed Name')
+  })
+
+  it('falls back to a saved name, then the session title, then the topic number', () => {
     const baseRow = {
       source: 'telegram',
       user_id: SCOTT_ID,
@@ -385,21 +483,20 @@ describe('normalizeTelegramWorkstreams', () => {
       started_at: 100,
     }
 
-    const overridden = normalizeTelegramWorkstreams(
+    const savedOnly = normalizeTelegramWorkstreams(
       [
         {
           ...baseRow,
-          id: 's-override',
-          session_key: 'key-override',
+          id: 's-saved',
+          session_key: 'key-saved',
           thread_id: '20',
-          origin_json: JSON.stringify({ chat_topic: 'From Telegram' }),
           title: 'AI generated title',
         },
       ],
       SCOTT_ID,
-      { 'chat-1:20': 'User override' },
+      { 'chat-1:20': 'Saved name' },
     )
-    expect(overridden[0].title).toBe('User override')
+    expect(savedOnly[0].title).toBe('Saved name')
 
     const usesOrigin = normalizeTelegramWorkstreams(
       [

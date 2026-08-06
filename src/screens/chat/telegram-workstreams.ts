@@ -46,6 +46,35 @@ export type RenameTelegramTopicResult = {
   error?: string
 }
 
+export type CreatedTelegramTopic = {
+  sessionId: string
+  sessionKey: string
+  groupName: string
+  chatId: string
+  topicId: string
+  title: string
+}
+
+export async function createTelegramTopic(input: {
+  chatId: string
+  groupName: string
+  name: string
+}): Promise<CreatedTelegramTopic> {
+  const response = await fetch('/api/telegram-topic-create', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  const payload = (await response.json().catch(() => ({}))) as {
+    topic?: CreatedTelegramTopic
+    error?: string
+  }
+  if (!response.ok || !payload.topic) {
+    throw new Error(payload.error || 'Failed to create Telegram topic')
+  }
+  return payload.topic
+}
+
 export async function renameTelegramTopic(input: {
   chatId: string
   topicId: string

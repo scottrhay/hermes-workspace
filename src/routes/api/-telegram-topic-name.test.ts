@@ -5,7 +5,10 @@ import {
   getGatewayCapabilities,
   listSessions,
 } from '../../server/claude-api'
-import { setTopicNameOverride } from '../../server/telegram-topic-names'
+import {
+  confirmTopicNameFromTelegram,
+  setTopicNameOverride,
+} from '../../server/telegram-topic-names'
 import { Route } from './telegram-topic-name'
 import type * as TelegramTopicNames from '../../server/telegram-topic-names'
 
@@ -23,7 +26,10 @@ vi.mock('../../server/telegram-topic-names', async (importOriginal) => {
   const actual = await importOriginal<typeof TelegramTopicNames>()
   return {
     ...actual,
+    // Both writers must be stubbed: either one reaching the real module would
+    // persist test fixtures into the developer's own workspace state dir.
     setTopicNameOverride: vi.fn(),
+    confirmTopicNameFromTelegram: vi.fn(),
   }
 })
 
@@ -110,6 +116,38 @@ describe('POST /api/telegram-topic-name', () => {
     expect(setTopicNameOverride).not.toHaveBeenCalled()
   })
 
+  it('finds an authorized topic beyond the first dashboard page', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      ...AUTHORIZED_SESSION,
+      id: `older-${index}`,
+      session_key: `older-key-${index}`,
+      thread_id: String(index + 10_000),
+    }))
+    vi.mocked(listSessions)
+      .mockResolvedValueOnce(firstPage as any)
+      .mockResolvedValueOnce([AUTHORIZED_SESSION] as any)
+    delete process.env.TELEGRAM_BOT_TOKEN
+
+    const response = await handler({
+      request: postRequest({
+        chatId: 'chat-1',
+        topicId: '2246',
+        name: 'Administration',
+        pushToTelegram: false,
+      }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(listSessions).toHaveBeenNthCalledWith(1, 100, 0, {
+      order: 'recent',
+      source: 'telegram',
+    })
+    expect(listSessions).toHaveBeenNthCalledWith(2, 100, 100, {
+      order: 'recent',
+      source: 'telegram',
+    })
+  })
+
   it('saves the override and reports unavailable when no bot token is configured', async () => {
     delete process.env.TELEGRAM_BOT_TOKEN
     global.fetch = vi.fn()
@@ -148,6 +186,30 @@ describe('POST /api/telegram-topic-name', () => {
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ ok: true, telegram: 'renamed' })
+    // Telegram now holds this name, so the record is promoted from a local
+    // fallback to a confirmed one and stops fighting future observations.
+    expect(confirmTopicNameFromTelegram).toHaveBeenCalledWith(
+      'chat-1',
+      '2246',
+      'New Topic Name',
+    )
+  })
+
+  it('leaves the name unconfirmed when the Telegram push fails', async () => {
+    process.env.TELEGRAM_BOT_TOKEN = 'super-secret-token'
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ ok: false, description: 'CHAT_NOT_FOUND' }),
+    }) as unknown as typeof fetch
+
+    await handler({
+      request: postRequest({
+        chatId: 'chat-1',
+        topicId: '2246',
+        name: 'New Topic Name',
+      }),
+    })
+
+    expect(confirmTopicNameFromTelegram).not.toHaveBeenCalled()
   })
 
   it('reports renamed when Telegram says the topic already has that name', async () => {
