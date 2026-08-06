@@ -2764,14 +2764,13 @@ export function ChatScreen({
               : 'grid grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(0,1fr)]',
         )}
       >
-        {hideUi || compact || isFocusMode ? null : isMobile ? null : (
-          <FileExplorerSidebar
-            collapsed={fileExplorerCollapsed}
-            onToggle={handleToggleFileExplorer}
-            onInsertReference={handleInsertFileReference}
-          />
-        )}
-
+        {/*
+          The file explorer no longer renders beside the chat. It ate a third
+          of the window, its only collapse control was sr-only (so there was
+          no visible way to close it), and its one chat-specific job — typing
+          a file path into the composer — did not justify that. The full
+          browser still lives at /files.
+        */}
         <main
           className={cn(
             'flex h-full flex-1 min-h-0 min-w-0 flex-col overflow-hidden transition-[margin-bottom] duration-200',

@@ -129,10 +129,10 @@ export function SearchModal() {
         id: 'qa-files',
         emoji: '📁',
         label: 'Files',
-        description: 'Toggle the file explorer sidebar',
+        description: 'Browse workspace files',
         onSelect: () => {
           closeModal()
-          emitSearchModalEvent(SEARCH_MODAL_EVENTS.TOGGLE_FILE_EXPLORER)
+          navigate({ to: '/files' })
         },
       },
       {
