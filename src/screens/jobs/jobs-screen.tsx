@@ -100,7 +100,7 @@ function JobListRow({
     <button
       type="button"
       data-testid={`job-row-${job.id}`}
-      aria-selected={isSelected}
+      aria-pressed={isSelected}
       onClick={() => onSelect(job.id)}
       className={cn(
         'w-full text-left px-3 py-2 text-sm transition-colors',
@@ -229,7 +229,9 @@ export function RunHistory({ jobId }: { jobId: string }) {
               <span>{formatTimestamp(output.timestamp)}</span>
               <span className="flex items-center gap-1 min-w-0">
                 <span className="shrink-0">
-                  {output.size.toLocaleString()} B
+                  {Number.isFinite(output.size)
+                    ? `${output.size.toLocaleString()} B`
+                    : '—'}
                 </span>
                 <HugeiconsIcon
                   icon={isRunExpanded ? ArrowUp01Icon : ArrowDown01Icon}
@@ -266,6 +268,7 @@ function JobDetailPane({
   onTrigger,
   onEdit,
   onDelete,
+  triggerPending,
 }: {
   job: ClaudeJob
   onPause: (id: string) => void
@@ -273,6 +276,7 @@ function JobDetailPane({
   onTrigger: (id: string) => void
   onEdit: (job: ClaudeJob) => void
   onDelete: (id: string) => void
+  triggerPending: boolean
 }) {
   const isPaused = !job.enabled || job.state === 'paused'
   const deliveryDisplay =
@@ -302,11 +306,12 @@ function JobDetailPane({
         <div className="flex shrink-0 items-center gap-1 pt-0.5">
           <button
             type="button"
+            disabled={triggerPending}
             onClick={(e) => {
               e.stopPropagation()
               onTrigger(job.id)
             }}
-            className="rounded-lg p-1.5 transition-colors hover:bg-[var(--theme-hover)]"
+            className="rounded-lg p-1.5 transition-colors hover:bg-[var(--theme-hover)] disabled:cursor-not-allowed disabled:opacity-50"
             title="Run now"
             data-testid="action-run"
           >
@@ -320,7 +325,8 @@ function JobDetailPane({
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              isPaused ? onResume(job.id) : onPause(job.id)
+              if (isPaused) onResume(job.id)
+              else onPause(job.id)
             }}
             className="rounded-lg p-1.5 transition-colors hover:bg-[var(--theme-hover)]"
             title={isPaused ? 'Resume' : 'Pause'}
@@ -450,12 +456,18 @@ export function JobsScreen() {
       void queryClient.invalidateQueries({ queryKey: QUERY_KEY })
       toast('Job paused')
     },
+    onError: (error) => {
+      toast(error instanceof Error ? error.message : 'Failed to pause job', { type: 'error' })
+    },
   })
   const resumeMutation = useMutation({
     mutationFn: resumeJob,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: QUERY_KEY })
       toast('Job resumed')
+    },
+    onError: (error) => {
+      toast(error instanceof Error ? error.message : 'Failed to resume job', { type: 'error' })
     },
   })
   const triggerMutation = useMutation({
@@ -464,12 +476,19 @@ export function JobsScreen() {
       void queryClient.invalidateQueries({ queryKey: QUERY_KEY })
       toast('Job triggered')
     },
+    onError: (error) => {
+      toast(error instanceof Error ? error.message : 'Failed to trigger job', { type: 'error' })
+    },
   })
   const deleteMutation = useMutation({
     mutationFn: deleteJob,
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       void queryClient.invalidateQueries({ queryKey: QUERY_KEY })
       toast('Job deleted')
+      setSelectedJobId((current) => (current === deletedId ? null : current))
+    },
+    onError: (error) => {
+      toast(error instanceof Error ? error.message : 'Failed to delete job', { type: 'error' })
     },
   })
   const createMutation = useMutation({
@@ -558,9 +577,8 @@ export function JobsScreen() {
       if (!job) return
       if (!confirm(`Delete job "${job.name}"?`)) return
       deleteMutation.mutate(id)
-      if (selectedJobId === id) setSelectedJobId(null)
     },
-    [allJobs, deleteMutation, selectedJobId],
+    [allJobs, deleteMutation],
   )
 
   const handleSelect = useCallback((id: string) => {
@@ -625,10 +643,10 @@ export function JobsScreen() {
       </header>
 
       {/* Split pane body */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
         {/* Left: dense selector pane */}
         <div
-          className="flex flex-col w-72 shrink-0 border-r border-[var(--theme-border)] overflow-hidden"
+          className="flex max-h-[45%] w-full shrink-0 flex-col overflow-hidden border-b border-[var(--theme-border)] md:max-h-none md:w-72 md:border-b-0 md:border-r"
           data-testid="jobs-selector"
         >
           {/* Search bar */}
@@ -746,6 +764,7 @@ export function JobsScreen() {
               onTrigger={(id) => triggerMutation.mutate(id)}
               onEdit={(j) => setEditingJob(j)}
               onDelete={handleDelete}
+              triggerPending={triggerMutation.isPending}
             />
           ) : (
             <div

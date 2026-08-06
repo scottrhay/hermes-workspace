@@ -35,6 +35,7 @@ vi.mock('./edit-job-dialog', () => ({
 }))
 
 import {
+  deleteJob,
   fetchJobs,
   fetchJobOutput,
   fetchJobProfiles,
@@ -42,8 +43,13 @@ import {
   resumeJob,
   triggerJob,
 } from '@/lib/jobs-api'
+import { toast } from '@/components/ui/toast'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+  vi.unstubAllGlobals()
+})
 
 // --- fixtures ---
 
@@ -266,12 +272,12 @@ describe('JobsScreen - selection', () => {
     })
   })
 
-  it('selected row has aria-selected=true', async () => {
+  it('selected row exposes pressed state', async () => {
     renderScreen()
     const row = await screen.findByTestId(`job-row-${activeJob.id}`)
     fireEvent.click(row)
     await screen.findByTestId('job-detail-pane')
-    expect(row.getAttribute('aria-selected')).toBe('true')
+    expect(row.getAttribute('aria-pressed')).toBe('true')
   })
 })
 
@@ -373,7 +379,7 @@ describe('JobsScreen - action isolation', () => {
     await screen.findByTestId('job-detail-pane')
 
     // verify selection before action
-    expect(activeRow.getAttribute('aria-selected')).toBe('true')
+    expect(activeRow.getAttribute('aria-pressed')).toBe('true')
 
     const pauseBtn = screen.getByTestId('action-pause-resume')
     fireEvent.click(pauseBtn)
@@ -384,7 +390,7 @@ describe('JobsScreen - action isolation', () => {
         'Daily summary',
       )
     })
-    expect(activeRow.getAttribute('aria-selected')).toBe('true')
+    expect(activeRow.getAttribute('aria-pressed')).toBe('true')
     expect(screen.queryByTestId('detail-empty-state')).toBeNull()
   })
 
@@ -394,7 +400,7 @@ describe('JobsScreen - action isolation', () => {
     fireEvent.click(activeRow)
     await screen.findByTestId('job-detail-pane')
 
-    expect(activeRow.getAttribute('aria-selected')).toBe('true')
+    expect(activeRow.getAttribute('aria-pressed')).toBe('true')
 
     fireEvent.click(screen.getByTestId('action-run'))
 
@@ -404,7 +410,7 @@ describe('JobsScreen - action isolation', () => {
         'Daily summary',
       )
     })
-    expect(activeRow.getAttribute('aria-selected')).toBe('true')
+    expect(activeRow.getAttribute('aria-pressed')).toBe('true')
     expect(screen.queryByTestId('detail-empty-state')).toBeNull()
   })
 })
@@ -437,6 +443,15 @@ describe('RunHistory - states', () => {
     const list = await screen.findByTestId('history-list')
     expect(list.textContent).toContain('24 B')
     expect(list.textContent).toContain('26 B')
+  })
+
+  it('keeps history usable when an upstream run omits size', async () => {
+    ;(fetchJobOutput as Mock).mockResolvedValue([
+      { ...sampleOutputs[0], size: undefined } as unknown as JobOutput,
+    ])
+    renderRunHistory('job-1')
+    const list = await screen.findByTestId('history-list')
+    expect(list.textContent).toContain('—')
   })
 
   it('expands a run row on click and shows content', async () => {
@@ -483,5 +498,38 @@ describe('RunHistory - states', () => {
     renderRunHistory('job-xyz')
     await screen.findByTestId('history-empty')
     expect(fetchJobOutput).toHaveBeenCalledWith('job-xyz', HISTORY_LIMIT)
+  })
+})
+
+describe('JobsScreen - mutation failures', () => {
+  beforeEach(() => {
+    ;(fetchJobs as Mock).mockResolvedValue([activeJob])
+    ;(fetchJobProfiles as Mock).mockResolvedValue([])
+    ;(fetchJobOutput as Mock).mockResolvedValue([])
+    vi.stubGlobal('confirm', vi.fn(() => true))
+  })
+
+  it('shows an error and preserves selection when delete fails', async () => {
+    ;(deleteJob as Mock).mockRejectedValue(new Error('delete denied'))
+    renderScreen()
+    const row = await screen.findByTestId(`job-row-${activeJob.id}`)
+    fireEvent.click(row)
+    await screen.findByTestId('job-detail-pane')
+    fireEvent.click(screen.getByTestId('action-delete'))
+
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith('delete denied', { type: 'error' })
+    })
+    expect(screen.getByTestId('job-detail-pane')).toBeTruthy()
+    expect(row.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('disables Run now while its request is pending', async () => {
+    ;(triggerJob as Mock).mockReturnValue(new Promise(() => {}))
+    renderScreen()
+    fireEvent.click(await screen.findByTestId(`job-row-${activeJob.id}`))
+    const runButton = await screen.findByTestId('action-run')
+    fireEvent.click(runButton)
+    await waitFor(() => expect(runButton).toHaveProperty('disabled', true))
   })
 })

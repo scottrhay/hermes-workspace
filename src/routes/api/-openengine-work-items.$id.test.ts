@@ -119,6 +119,17 @@ describe('GET /api/openengine-work-items/$id', () => {
     expect(fetchOEWorkItemDetail).not.toHaveBeenCalled()
   })
 
+  it('returns 400 for a malformed id before calling OpenEngine', async () => {
+    const handler = await loadHandler()
+
+    const res = await handler({
+      request: new Request('http://localhost/api/openengine-work-items/a.b'),
+      params: { id: 'a.b' },
+    })
+    expect(res.status).toBe(400)
+    expect(fetchOEWorkItemDetail).not.toHaveBeenCalled()
+  })
+
   it('returns ok:true with item on success', async () => {
     vi.mocked(fetchOEWorkItemDetail).mockResolvedValue(MOCK_DETAIL as any)
     const handler = await loadHandler()

@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { OPENENGINE_DASHBOARD_URL, TasksScreen } from './tasks-screen'
+import { OPENENGINE_DASHBOARD_URL, TasksScreen, formatRelative } from './tasks-screen'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -210,6 +210,12 @@ describe('TasksScreen', () => {
     expect(firstCard.textContent).toContain('P0')
     expect(firstCard.textContent).toContain('default')
     expect(firstCard.textContent).toContain('full_spec')
+    expect(firstCard.textContent).toContain('governed')
+  })
+
+  it('renders a safe placeholder for a missing update timestamp', () => {
+    expect(formatRelative('')).toBe('—')
+    expect(formatRelative('not-a-date')).toBe('—')
   })
 
   it('opens detail panel on one-click card select', async () => {
@@ -350,6 +356,22 @@ describe('TasksScreen', () => {
       expect(cards.length).toBe(1)
       expect(cards[0].textContent).toContain('Closed issue')
     })
+  })
+
+  it('offers live statuses that are not in the built-in ordering', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          ok: true,
+          items: [{ ...MOCK_ITEMS[0], id: 'custom', status: 'awaiting_vendor' }],
+        }),
+      }),
+    )
+    renderTasks()
+    const statusSelect = await screen.findByLabelText(/filter by status/i)
+    expect(statusSelect.textContent).toContain('awaiting vendor')
   })
 
   it('shows filtered-empty state when no items match filter', async () => {

@@ -94,9 +94,11 @@ function applyFilters(items: OEWorkItem[], filters: OEFilters): OEWorkItem[] {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatRelative(iso: string): string {
+export function formatRelative(iso: string): string {
   try {
-    const ms = Date.now() - new Date(iso).getTime()
+    const timestamp = new Date(iso).getTime()
+    if (!iso || Number.isNaN(timestamp)) return '—'
+    const ms = Date.now() - timestamp
     if (ms < 60_000) return 'just now'
     if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`
     if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h ago`
@@ -190,6 +192,11 @@ function OECard({ item, selected, onSelect }: CardProps) {
         {item.tier && (
           <span className="inline-flex items-center rounded border border-[var(--theme-border)] bg-[var(--theme-surface-2)] px-1.5 py-0.5 text-[10px] text-[var(--theme-muted)]">
             {item.tier}
+          </span>
+        )}
+        {item.workflowMode && (
+          <span className="inline-flex items-center rounded border border-[var(--theme-border)] bg-[var(--theme-surface-2)] px-1.5 py-0.5 text-[10px] text-[var(--theme-muted)]">
+            {item.workflowMode}
           </span>
         )}
       </div>
@@ -524,6 +531,13 @@ function FilterBar({ items, filters, onChange }: FilterBarProps) {
       ) as string[],
     [items],
   )
+  const statuses = useMemo(() => {
+    const live = [...new Set(items.map((i) => i.status))]
+    return [
+      ...STATUS_ORDER.filter((status) => live.includes(status)),
+      ...live.filter((status) => !STATUS_ORDER.includes(status)).sort(),
+    ]
+  }, [items])
 
   const update = <K extends keyof OEFilters>(key: K, value: OEFilters[K]) =>
     onChange({ ...filters, [key]: value })
@@ -563,7 +577,7 @@ function FilterBar({ items, filters, onChange }: FilterBarProps) {
         className="h-7 rounded border border-[var(--theme-border)] bg-[var(--theme-surface-2)] px-2 text-xs text-ink focus:border-[var(--theme-accent)] focus:outline-none"
       >
         <option value="">All statuses</option>
-        {STATUS_ORDER.map((s) => (
+        {statuses.map((s) => (
           <option key={s} value={s}>
             {statusLabel(s)}
           </option>
@@ -633,6 +647,9 @@ export function TasksScreen() {
     queryFn: fetchWorkItems,
     staleTime: 30_000,
     refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    retry: 1,
+    retryDelay: 0,
   })
 
   const lastSuccess = useMemo(

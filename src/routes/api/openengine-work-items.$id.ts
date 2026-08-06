@@ -22,8 +22,8 @@ export const Route = createFileRoute('/api/openengine-work-items/$id')({
         }
 
         const id = (params as { id?: string }).id
-        if (!id) {
-          return json({ ok: false, error: 'Missing work-item id' }, { status: 400 })
+        if (!id || !/^[\w-]+$/.test(id)) {
+          return json({ ok: false, error: 'Invalid work-item id' }, { status: 400 })
         }
 
         try {

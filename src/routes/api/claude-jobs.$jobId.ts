@@ -67,7 +67,7 @@ export const Route = createFileRoute('/api/claude-jobs/$jobId')({
           const dashboardPath = action
             ? `/api/cron/jobs/${params.jobId}/${action === 'run' ? 'trigger' : action}`
             : `/api/cron/jobs/${params.jobId}`
-          const res = await dashboardFetch(dashboardPath)
+          const res = await dashboardFetch(`${dashboardPath}${url.search}`)
           return new Response(await res.text(), {
             status: res.status,
             headers: { 'Content-Type': 'application/json' },
