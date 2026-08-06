@@ -38,6 +38,7 @@ import { ChatHeader } from './components/chat-header'
 import { ChatMessageList } from './components/chat-message-list'
 import { ChatEmptyState } from './components/chat-empty-state'
 import { ChatComposer } from './components/chat-composer'
+import { ChatRunStatus } from './components/chat-run-status'
 import { ConnectionStatusMessage } from './components/connection-status-message'
 import {
   clearPendingSendForSession,
@@ -2911,27 +2912,40 @@ export function ChatScreen({
             />
           )}
           {showComposer ? (
-            <ChatComposer
-              onSubmit={send}
-              onAbort={handleAbortStreaming}
-              isLoading={sending || waitingForResponse}
-              disabled={sending || hideUi}
-              sessionKey={
-                isNewChat
-                  ? undefined
-                  : forcedSessionKey ||
-                    resolvedSessionKey ||
-                    activeCanonicalKey ||
-                    activeSessionKey
-              }
-              wrapperRef={composerRef}
-              composerRef={composerHandleRef}
-              embedded={embedded}
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety
-              focusKey={`${isNewChat ? 'new' : activeFriendlyId}:${activeCanonicalKey ?? ''}`}
-              thinkingLevel={thinkingLevel}
-              onThinkingLevelChange={handleThinkingLevelChange}
-            />
+            <>
+              <ChatRunStatus
+                active={sending || waitingForResponse ||
+                  derivedStreamingInfo.isStreaming || isCompacting}
+                sending={sending}
+                isStreaming={derivedStreamingInfo.isStreaming}
+                streamingText={stableActiveStreamingText}
+                streamingThinking={realtimeStreamingThinking}
+                activeToolCalls={activeToolCalls}
+                lifecycleEvents={realtimeLifecycleEvents}
+                isCompacting={isCompacting}
+              />
+              <ChatComposer
+                onSubmit={send}
+                onAbort={handleAbortStreaming}
+                isLoading={sending || waitingForResponse}
+                disabled={sending || hideUi}
+                sessionKey={
+                  isNewChat
+                    ? undefined
+                    : forcedSessionKey ||
+                      resolvedSessionKey ||
+                      activeCanonicalKey ||
+                      activeSessionKey
+                }
+                wrapperRef={composerRef}
+                composerRef={composerHandleRef}
+                embedded={embedded}
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety
+                focusKey={`${isNewChat ? 'new' : activeFriendlyId}:${activeCanonicalKey ?? ''}`}
+                thinkingLevel={thinkingLevel}
+                onThinkingLevelChange={handleThinkingLevelChange}
+              />
+            </>
           ) : null}
         </main>
         {!compact && !isFocusMode && <AgentViewPanel />}

@@ -1,11 +1,47 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildSyntheticActiveSession,
+  mergeSessionTitle,
   mergeTelegramMetadata,
 } from './use-chat-sessions'
 import type { SessionMeta } from '../types'
+import type { SessionTitleInfo } from '../session-title-store'
 
 describe('mergeTelegramMetadata', () => {
+  it('keeps a manually saved MC title over gateway and Telegram-derived titles', () => {
+    const stored = {
+      title: 'Administration/Outlook',
+      source: 'manual',
+      status: 'ready',
+      error: null,
+    } as SessionTitleInfo
+    const session = mergeSessionTitle(
+      {
+        key: 'agent:main:telegram:group:-1003925413812:98',
+        friendlyId: '20260805_094237_52b365fb',
+        label: 'Exclude Automated Emails from Replies',
+        title: 'Exclude Automated Emails from Replies',
+        derivedTitle: 'Exclude Automated Emails from Replies',
+      } as SessionMeta,
+      stored,
+    )
+
+    const merged = mergeTelegramMetadata(session, {
+      sessionId: '20260805_094237_52b365fb',
+      sessionKey: 'agent:main:telegram:group:-1003925413812:98',
+      groupName: 'Administration',
+      chatId: '-1003925413812',
+      topicId: '98',
+      title: 'Outlook',
+      updatedAt: 100,
+      messageCount: 42,
+    })
+
+    expect(merged.label).toBe('Administration/Outlook')
+    expect(merged.title).toBe('Administration/Outlook')
+    expect(merged.derivedTitle).toBe('Administration/Outlook')
+  })
+
   it('prefers the workstream topic title over the session AI title', () => {
     const session = {
       key: 'k1',

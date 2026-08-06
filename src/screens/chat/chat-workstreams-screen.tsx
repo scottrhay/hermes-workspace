@@ -2,18 +2,20 @@
 
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Cancel01Icon,
   Moon02Icon,
   PencilEdit02Icon,
+  PlusSignIcon,
   RefreshIcon,
   Search01Icon,
   Sun02Icon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons'
 import {
+  createTelegramTopic,
   fetchTelegramWorkstreams,
   filterTelegramWorkstreams,
   groupTelegramWorkstreams,
@@ -240,12 +242,33 @@ function TopicChip({ workstream }: { workstream: TelegramWorkstream }) {
 
 export function ChatWorkstreamsScreen() {
   usePageTitle('Chat')
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [query, setQuery] = useState('')
   const [theme, setCurrentTheme] = useState(() => getTheme())
+  const [creatingChatId, setCreatingChatId] = useState<string | null>(null)
+  const [newTopicName, setNewTopicName] = useState('')
   const workstreamsQuery = useQuery({
     queryKey: telegramWorkstreamQueryKey,
     queryFn: fetchTelegramWorkstreams,
     refetchInterval: 10_000,
+  })
+  const createTopicMutation = useMutation({
+    mutationFn: createTelegramTopic,
+    onSuccess: async (topic) => {
+      await queryClient.invalidateQueries({ queryKey: telegramWorkstreamQueryKey })
+      setCreatingChatId(null)
+      setNewTopicName('')
+      await navigate({
+        to: '/chat/$sessionKey',
+        params: { sessionKey: topic.sessionId },
+      })
+    },
+    onError: (error) => {
+      toast(error instanceof Error ? error.message : 'Failed to create topic', {
+        type: 'error',
+      })
+    },
   })
 
   const filteredWorkstreams = useMemo(
@@ -270,6 +293,12 @@ export function ChatWorkstreamsScreen() {
     : error
       ? { label: 'Ariel · unavailable', dot: 'bg-red-500' }
       : { label: 'Ariel · connected', dot: 'bg-emerald-500' }
+
+  const submitNewTopic = (groupName: string, chatId: string) => {
+    const name = newTopicName.trim()
+    if (!name || !chatId || createTopicMutation.isPending) return
+    createTopicMutation.mutate({ chatId, groupName, name })
+  }
 
   const toggleTheme = () => {
     const nextTheme = getThemeVariant(theme, dark ? 'light' : 'dark')
@@ -395,6 +424,7 @@ export function ChatWorkstreamsScreen() {
                 const activeCount = group.workstreams.filter(
                   (workstream) => workstream.isActive,
                 ).length
+                const groupChatId = group.workstreams[0]?.chatId ?? ''
                 return (
                   <article
                     key={group.name}
@@ -412,7 +442,53 @@ export function ChatWorkstreamsScreen() {
                           ? `${activeCount} working`
                           : `${group.workstreams.length} topics`}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreatingChatId(groupChatId)
+                          setNewTopicName('')
+                        }}
+                        disabled={!groupChatId}
+                        className="inline-flex items-center gap-1 rounded-md border border-primary-200 px-2 py-1 text-[10px] font-semibold text-primary-700 transition hover:border-accent-500/50 hover:text-accent-600 disabled:opacity-40"
+                      >
+                        <HugeiconsIcon icon={PlusSignIcon} size={12} strokeWidth={1.8} />
+                        New topic
+                      </button>
                     </div>
+                    {creatingChatId === groupChatId ? (
+                      <form
+                        className="mb-3 flex items-center gap-2 rounded-lg border border-accent-500/30 bg-accent-500/5 p-2"
+                        onSubmit={(event) => {
+                          event.preventDefault()
+                          submitNewTopic(group.name, groupChatId)
+                        }}
+                      >
+                        <input
+                          autoFocus
+                          value={newTopicName}
+                          onChange={(event) => setNewTopicName(event.target.value)}
+                          placeholder={`New topic in ${group.name}`}
+                          maxLength={128}
+                          disabled={createTopicMutation.isPending}
+                          className="h-8 min-w-0 flex-1 rounded-md border border-primary-200 bg-primary-50 px-2.5 text-xs text-primary-900 outline-none focus:border-accent-500"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!newTopicName.trim() || createTopicMutation.isPending}
+                          className="h-8 rounded-md bg-accent-600 px-3 text-xs font-semibold text-white disabled:opacity-40"
+                        >
+                          {createTopicMutation.isPending ? 'Creating…' : 'Create'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCreatingChatId(null)}
+                          disabled={createTopicMutation.isPending}
+                          className="h-8 rounded-md px-2 text-xs text-primary-500 hover:bg-primary-100"
+                        >
+                          Cancel
+                        </button>
+                      </form>
+                    ) : null}
                     <div className="flex flex-wrap gap-2">
                       {group.workstreams.map((workstream) => (
                         <TopicChip

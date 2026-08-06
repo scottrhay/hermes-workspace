@@ -550,10 +550,10 @@ export function buildDisplayEntries(
 
     if (message.role === 'tool' || message.role === 'toolResult') {
       const previousEntry = entries[entries.length - 1]
-      if (previousEntry?.message.role === 'assistant') {
-        previousEntry.attachedToolMessages.push(message)
-      } else if (pendingAssistantToolMessages.length > 0) {
+      if (pendingAssistantToolMessages.length > 0) {
         pendingAssistantToolMessages.push(message)
+      } else if (previousEntry?.message.role === 'assistant') {
+        previousEntry.attachedToolMessages.push(message)
       }
       return
     }
@@ -572,54 +572,14 @@ export function buildDisplayEntries(
     entries.push(entry)
   })
 
-  // Trailing tool-only assistant messages after the final text response are
-  // hidden from the main entry list — they are post-response autonomous steps
-  // that should not visually inflate the last reply.
-  // getTrailingToolOnlyTurnSummary() can surface a compact count indicator.
+  if (pendingAssistantToolMessages.length > 0) {
+    const previousEntry = entries[entries.length - 1]
+    if (previousEntry?.message.role === 'assistant') {
+      previousEntry.attachedToolMessages.push(...pendingAssistantToolMessages)
+    }
+  }
 
   return entries
-}
-
-/**
- * Summarise trailing tool-only messages that appear after the final
- * text-containing assistant reply.  Returns null when there are no such
- * messages or when the thread already ends with assistant text (no trailing
- * tool turn).
- */
-export function getTrailingToolOnlyTurnSummary(
-  messages: Array<ChatMessage>,
-): { count: number; toolNames: Array<string>; hasFinalAssistantText: boolean } | null {
-  // Find the index of the last assistant message that contains visible text.
-  let lastTextAssistantIdx = -1
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]
-    if (msg.role === 'assistant' && textFromMessage(msg).trim().length > 0) {
-      lastTextAssistantIdx = i
-      break
-    }
-  }
-
-  if (lastTextAssistantIdx < 0) return null
-
-  const trailing = messages.slice(lastTextAssistantIdx + 1)
-  if (trailing.length === 0) return null
-
-  const toolNameSet = new Set<string>()
-  for (const msg of trailing) {
-    if (isAssistantToolCallOnlyMessage(msg)) {
-      for (const part of Array.isArray(msg.content) ? msg.content : []) {
-        if ((part as any).type === 'toolCall' && (part as any).name) {
-          toolNameSet.add((part as any).name as string)
-        }
-      }
-    }
-  }
-
-  return {
-    count: trailing.length,
-    toolNames: Array.from(toolNameSet),
-    hasFinalAssistantText: true,
-  }
 }
 
 function escapeAttributeSelector(value: string): string {

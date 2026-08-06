@@ -1336,6 +1336,7 @@ function ChatComposerComponent({
     if (
       !isModelMenuOpen &&
       !isProfileMenuOpen &&
+      !isWorkspaceMenuOpen &&
       !isThinkingMenuOpen &&
       !isControlsMenuOpen
     )
@@ -1345,11 +1346,13 @@ function ChatComposerComponent({
       if (controlsMenuRef.current?.contains(target)) return
       if (modelSelectorRef.current?.contains(target)) return
       if (profileMenuRef.current?.contains(target)) return
+      if (workspaceMenuRef.current?.contains(target)) return
       if (thinkingMenuRef.current?.contains(target)) return
       setIsControlsMenuOpen(false)
       setIsModelMenuOpen(false)
       setIsProviderSwitcherExpanded(false)
       setIsProfileMenuOpen(false)
+      setIsWorkspaceMenuOpen(false)
       setIsThinkingMenuOpen(false)
     }
 
@@ -1360,6 +1363,7 @@ function ChatComposerComponent({
   }, [
     isModelMenuOpen,
     isProfileMenuOpen,
+    isWorkspaceMenuOpen,
     isThinkingMenuOpen,
     isControlsMenuOpen,
   ])
@@ -2784,6 +2788,7 @@ function ChatComposerComponent({
                       onClick={() => {
                         setIsControlsMenuOpen((open) => !open)
                         setIsProfileMenuOpen(false)
+                        setIsWorkspaceMenuOpen(false)
                         setIsThinkingMenuOpen(false)
                         setIsModelMenuOpen(false)
                       }}
@@ -2826,6 +2831,7 @@ function ChatComposerComponent({
                               type="button"
                               onClick={() => {
                                 setIsProfileMenuOpen((open) => !open)
+                                setIsWorkspaceMenuOpen(false)
                                 setIsThinkingMenuOpen(false)
                                 setIsModelMenuOpen(false)
                               }}
@@ -2891,6 +2897,7 @@ function ChatComposerComponent({
                               onClick={() => {
                                 setIsThinkingMenuOpen((open) => !open)
                                 setIsProfileMenuOpen(false)
+                                setIsWorkspaceMenuOpen(false)
                                 setIsModelMenuOpen(false)
                               }}
                               className={cn(

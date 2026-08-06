@@ -13,25 +13,37 @@ import type { TelegramWorkstream } from '../telegram-workstreams'
 import type { SessionTitleInfo } from '../session-title-store'
 import type { SessionMeta } from '../types'
 
-function mergeSessionTitle(
+export function mergeSessionTitle(
   session: SessionMeta,
   stored: SessionTitleInfo | undefined,
 ): SessionMeta {
   if (!stored) return session
 
+  const storedTitle = stored.title?.trim()
+  const hasStoredManualTitle = stored.source === 'manual' && Boolean(storedTitle)
   const hasManualTitle = Boolean(session.label || session.title)
-  const derivedTitle = hasManualTitle
-    ? session.derivedTitle
-    : (stored.title ?? session.derivedTitle)
+  const derivedTitle = hasStoredManualTitle
+    ? storedTitle
+    : hasManualTitle
+      ? session.derivedTitle
+      : (stored.title ?? session.derivedTitle)
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety
   const titleStatus = stored.status ?? session.titleStatus
-  const titleSource = hasManualTitle
+  const titleSource = hasStoredManualTitle
     ? 'manual'
-    : (stored.source ?? session.titleSource)
+    : hasManualTitle
+      ? 'manual'
+      : (stored.source ?? session.titleSource)
   const titleError = stored.error ?? session.titleError
 
   return {
     ...session,
+    ...(hasStoredManualTitle
+      ? {
+          label: storedTitle,
+          title: storedTitle,
+        }
+      : {}),
     derivedTitle,
     titleStatus,
     titleSource,
@@ -44,13 +56,17 @@ export function mergeTelegramMetadata(
   workstream: TelegramWorkstream | undefined,
 ): SessionMeta {
   if (!workstream) return session
+  const manualTitle =
+    session.titleSource === 'manual'
+      ? (session.label?.trim() || session.title?.trim() || undefined)
+      : undefined
   return {
     ...session,
-    // The workstream title carries topic-name precedence (user override →
-    // Telegram chat_topic → session title), so it outranks the session's own
-    // AI-generated title — matching buildSyntheticActiveSession below.
-    title: workstream.title || session.title,
-    derivedTitle: workstream.title || session.derivedTitle,
+    // A title explicitly saved in MC outranks transport-derived metadata.
+    // Otherwise the workstream title carries topic-name precedence (user
+    // override → Telegram chat_topic → session AI title).
+    title: manualTitle || workstream.title || session.title,
+    derivedTitle: manualTitle || workstream.title || session.derivedTitle,
     source: 'telegram',
     sessionKey: workstream.sessionKey,
     threadId: workstream.topicId,

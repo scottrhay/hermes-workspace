@@ -3,6 +3,7 @@ import {
   ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  BookOpen01Icon,
   BrainIcon,
   Building01Icon,
   Chat01Icon,
@@ -578,6 +579,7 @@ function ChatSidebarComponent({
   const isTerminalActive = pathname === '/terminal'
   const isJobsActive = pathname === '/jobs'
   const isMemoryActive = pathname === '/memory'
+  const isResearchActive = pathname === '/research'
   const isTasksActive = pathname === '/tasks'
   const isConductorActive = pathname === '/conductor'
   const isOperationsActive = pathname === '/operations'
@@ -586,7 +588,7 @@ function ChatSidebarComponent({
     (state) => state.settings.experimentalEchoStudio,
   )
   const mainRoutes = ['/chat', '/new', '/files', '/terminal']
-  const knowledgeRoutes = ['/memory', '/skills']
+  const knowledgeRoutes = ['/research', '/memory', '/skills']
   const systemRoutes = ['/settings', '/logs']
 
   useEffect(() => {
@@ -776,14 +778,14 @@ function ChatSidebarComponent({
     onClick: openSearchModal,
   }
 
-  const isDashboardActive = pathname === '/dashboard'
+  const isDashboardActive = pathname === '/'
 
   const mainItems: Array<NavItemDef> = [
     {
       kind: 'link',
-      to: '/dashboard',
+      to: '/',
       icon: DashboardSquare01Icon,
-      label: t('nav.dashboard'),
+      label: 'Mission Control',
       active: isDashboardActive,
     },
     {
@@ -824,6 +826,20 @@ function ChatSidebarComponent({
     },
     {
       kind: 'link',
+      to: '/marketing',
+      icon: Building01Icon,
+      label: 'Marketing',
+      active: pathname.startsWith('/marketing'),
+    },
+    {
+      kind: 'link',
+      to: '/training',
+      icon: BookOpen01Icon,
+      label: 'Training',
+      active: pathname.startsWith('/training'),
+    },
+    {
+      kind: 'link',
       to: '/conductor',
       icon: Rocket01Icon,
       label: 'Conductor',
@@ -858,6 +874,13 @@ function ChatSidebarComponent({
   ]
 
   const knowledgeItems: Array<NavItemDef> = [
+    {
+      kind: 'link',
+      to: '/research',
+      icon: BookOpen01Icon,
+      label: 'Research',
+      active: isResearchActive,
+    },
     {
       kind: 'link',
       to: '/memory',
