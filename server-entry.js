@@ -2,7 +2,10 @@ import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { join, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadHermesApiToken } from './server-hermes-auth.js'
+import {
+  loadHermesApiToken,
+  loadHermesEnvSecret,
+} from './server-hermes-auth.js'
 import {
   isRemoteAddressAllowed,
   parseAllowedRemoteIps,
@@ -12,6 +15,12 @@ const hermesAuth = await loadHermesApiToken()
 if (hermesAuth.token && hermesAuth.source === 'hermes-config') {
   process.env.HERMES_API_TOKEN = hermesAuth.token
   console.log('[workspace] using authenticated Hermes API server connection')
+}
+
+const telegramAuth = await loadHermesEnvSecret('TELEGRAM_BOT_TOKEN')
+if (telegramAuth.value && telegramAuth.source === 'hermes-env') {
+  process.env.TELEGRAM_BOT_TOKEN = telegramAuth.value
+  console.log('[workspace] using Telegram credentials from the active Hermes profile')
 }
 
 // Load the built server only after authentication discovery because its gateway
