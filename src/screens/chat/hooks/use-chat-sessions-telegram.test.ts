@@ -67,6 +67,34 @@ describe('mergeTelegramMetadata', () => {
     expect(merged.derivedTitle).toBe('Repos')
     expect(merged.source).toBe('telegram')
   })
+
+  it('overrides the session label, which the chat header reads before title', () => {
+    // activeTitle resolves label → title → derivedTitle, so a label left
+    // behind kept the Hermes AI title in the chat header while the
+    // workstreams list already showed the real Telegram topic name.
+    const session = {
+      key: 'agent:main:telegram:group:-1003395312608:4',
+      friendlyId: '20260805_140659_a42e143e',
+      label: 'Penguin Session Readiness and Copilot Updates',
+      title: 'Penguin Session Readiness and Copilot Updates',
+      derivedTitle: 'Penguin Session Readiness and Copilot Updates',
+    } as SessionMeta
+
+    const merged = mergeTelegramMetadata(session, {
+      sessionId: '20260805_140659_a42e143e',
+      sessionKey: 'agent:main:telegram:group:-1003395312608:4',
+      groupName: 'Training',
+      chatId: '-1003395312608',
+      topicId: '4',
+      title: 'Prep',
+      updatedAt: 100,
+      messageCount: 74,
+    })
+
+    expect(merged.label).toBe('Prep')
+    expect(merged.title).toBe('Prep')
+    expect(merged.derivedTitle).toBe('Prep')
+  })
 })
 
 describe('Telegram workstream session recovery', () => {

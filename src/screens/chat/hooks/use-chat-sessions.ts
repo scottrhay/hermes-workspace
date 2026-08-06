@@ -67,6 +67,11 @@ export function mergeTelegramMetadata(
     // override → Telegram chat_topic → session AI title).
     title: manualTitle || workstream.title || session.title,
     derivedTitle: manualTitle || workstream.title || session.derivedTitle,
+    // `label` has to move too. activeTitle reads label before title, so
+    // leaving it behind meant the chat header kept showing the Hermes
+    // session's AI-generated label while the workstream list showed the real
+    // Telegram topic name.
+    label: manualTitle || workstream.title || session.label,
     source: 'telegram',
     sessionKey: workstream.sessionKey,
     threadId: workstream.topicId,
