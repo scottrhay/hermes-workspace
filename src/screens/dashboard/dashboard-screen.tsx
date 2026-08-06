@@ -21,7 +21,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { AchievementsCard } from './components/achievements-card'
 import { ActiveModelKpi } from './components/active-model-kpi'
 import { AnalyticsChartCard } from './components/analytics-chart-card'
 import { AttentionMarquee } from './components/attention-marquee'
@@ -30,6 +29,7 @@ import { CostLedgerCard } from './components/cost-ledger-card'
 import { EditModePanel } from './components/edit-mode-panel'
 import { HeroMetrics } from './components/hero-metrics'
 import { LogsTailCard } from './components/logs-tail-card'
+import { OpenBrainCard } from './components/openbrain-card'
 import { OperatorTipCard } from './components/operator-tip-card'
 import { OpsStrip } from './components/ops-strip'
 import { ProviderMixCard } from './components/provider-mix-card'
@@ -802,17 +802,13 @@ export function DashboardScreen() {
   }, [period])
 
   // Aggregate dashboard overview — surfaces the data the native
-  // Hermes dashboard exposes (status, platforms, cron, achievements,
+  // Hermes dashboard exposes (status, platforms, cron,
   // model info, analytics) in a single round trip with per-section
   // graceful fallbacks. Each card renders only when its slice resolves.
   const overviewQuery = useQuery<DashboardOverview>({
     queryKey: ['dashboard', 'overview', period],
     queryFn: async () => {
-      // achievements=5 (instead of 3) gives the Achievements rail
-      // card enough vertical mass to fill the gap below Top Models.
-      const res = await fetch(
-        `/api/dashboard/overview?days=${period}&achievements=5`,
-      )
+      const res = await fetch(`/api/dashboard/overview?days=${period}`)
       if (!res.ok) throw new Error(`overview ${res.status}`)
       return (await res.json()) as DashboardOverview
     },
@@ -1119,13 +1115,8 @@ export function DashboardScreen() {
         ) : null}
       </div>
 
-      {/* ── Primary content: Sessions Intelligence (replaces 14d Activity) + side rail ──
-           Iteration 006 layout per Eric:
-           - Attention now rides the OpsStrip marquee, not the rail.
-           - Achievements moved up to sit beside Top Models would push the chart out
-             of place; instead it now lives at the *top* of the side rail since the
-             rail itself is right of the chart, which produces the same visual order.
-           - Logs default off; still toggleable from edit mode for power users. */}
+      {/* ── Primary content: Sessions Intelligence + business-relevant side rail.
+           Logs default off; still toggleable from edit mode for power users. ── */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         {/* Iter 013 main column order: Operator Tip first (compact),
             then Sessions Intelligence (the bottom anchor that grows
@@ -1163,25 +1154,23 @@ export function DashboardScreen() {
             </WidgetShell>
           ) : null}
         </div>
-        {/* Side rail. Achievements is now first (sits beside Top Models
-            visually since the rail is right of the chart row + sessions),
-            then Skills, then the rhythm card. Mix & rhythm is the unique
-            chart in this column — keeping it.
+        {/* Side rail. Skills leads into the mix and rhythm chart.
             `min-h-full` + the trailing `flex-1` rhythm card together
             stretch the rail to match Sessions Intelligence height so
             we don't get the dangling gap Eric flagged in iter 007. */}
         <div className="flex min-h-full flex-col gap-3 lg:col-span-4">
-          <WidgetShell id="achievements" layout={layout}>
-            <AchievementsCard
-              achievements={overview?.achievements ?? null}
-            />
-          </WidgetShell>
           <WidgetShell id="skills_usage" layout={layout}>
             <SkillsUsageCard
               usage={overview?.skillsUsage ?? null}
               installedCount={skillsInstalled}
               onOpen={() => navigate({ to: '/skills' })}
             />
+          </WidgetShell>
+          {/* OpenBrain sits between Skills and the rhythm card so it keeps a
+              natural height — the trailing flex-1 card below still absorbs
+              the remaining rail space. */}
+          <WidgetShell id="openbrain" layout={layout}>
+            <OpenBrainCard />
           </WidgetShell>
           {/* `flex-1` here pushes the rhythm card to consume any
               remaining vertical space so the rail's bottom aligns

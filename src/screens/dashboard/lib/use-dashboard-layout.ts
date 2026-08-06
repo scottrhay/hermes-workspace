@@ -21,8 +21,8 @@ export type WidgetId =
   | 'logs_tail'
   | 'operator_tip'
   | 'skills_usage'
-  | 'achievements'
   | 'mix_rhythm'
+  | 'openbrain'
 
 export type WidgetMeta = {
   id: WidgetId
@@ -111,17 +111,19 @@ export const WIDGET_CATALOG: ReadonlyArray<WidgetMeta> = [
     column: 'rail',
     hideable: true,
   },
-  {
-    id: 'achievements',
-    label: 'Achievements',
-    description: 'Recent unlocks & progress.',
-    column: 'rail',
-    hideable: true,
-  },
+
   {
     id: 'mix_rhythm',
     label: 'Mix & rhythm',
     description: 'Token mix + hour-of-day activity strip.',
+    column: 'rail',
+    hideable: true,
+  },
+  {
+    id: 'openbrain',
+    label: 'OpenBrain',
+    description:
+      'Durable memory telemetry — memory/decision counts, latest entries, and active projects.',
     column: 'rail',
     hideable: true,
   },
