@@ -68,6 +68,44 @@ describe('mergeTelegramMetadata', () => {
     expect(merged.source).toBe('telegram')
   })
 
+  it('lets the Telegram topic name win over a gateway AI title', () => {
+    // The real failure: mergeSessionTitle stamps titleSource 'manual' on any
+    // session carrying a gateway label (to stop auto-titling clobbering it),
+    // and mergeTelegramMetadata read that as "the user named this", so the AI
+    // title always beat the topic name in the header.
+    const session = mergeSessionTitle(
+      {
+        key: 'agent:main:telegram:group:-1003395312608:4',
+        friendlyId: '20260805_140659_a42e143e',
+        label: 'Penguin Session Readiness and Copilot Updates',
+        title: 'Penguin Session Readiness and Copilot Updates',
+        derivedTitle: 'Penguin Session Readiness and Copilot Updates',
+      } as SessionMeta,
+      {
+        title: 'Penguin Session Readiness and Copilot Updates',
+        source: 'auto',
+        status: 'ready',
+        error: null,
+      } as SessionTitleInfo,
+    )
+    expect(session.titleSource).toBe('manual')
+    expect(session.userTitle).toBeUndefined()
+
+    const merged = mergeTelegramMetadata(session, {
+      sessionId: '20260805_140659_a42e143e',
+      sessionKey: 'agent:main:telegram:group:-1003395312608:4',
+      groupName: 'Training',
+      chatId: '-1003395312608',
+      topicId: '4',
+      title: 'Prep',
+      updatedAt: 100,
+      messageCount: 74,
+    })
+
+    expect(merged.label).toBe('Prep')
+    expect(merged.title).toBe('Prep')
+  })
+
   it('overrides the session label, which the chat header reads before title', () => {
     // activeTitle resolves label → title → derivedTitle, so a label left
     // behind kept the Hermes AI title in the chat header while the

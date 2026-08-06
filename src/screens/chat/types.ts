@@ -120,6 +120,15 @@ export type SessionMeta = {
   titleStatus?: SessionTitleStatus
   titleSource?: SessionTitleSource
   titleError?: string | null
+  /**
+   * A title the user actually typed in Mission Control.
+   *
+   * `titleSource: 'manual'` cannot stand in for this: it is also set for any
+   * session carrying a gateway-generated title, to stop auto-titling from
+   * overwriting it. Only this field means "a human chose this name", which is
+   * what may outrank a real Telegram topic name.
+   */
+  userTitle?: string
   preview?: string | null
   source?: string
   sessionKey?: string

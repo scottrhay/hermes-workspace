@@ -47,6 +47,10 @@ export function mergeSessionTitle(
     derivedTitle,
     titleStatus,
     titleSource,
+    // Only a title stored with source 'manual' was actually typed by the
+    // user. titleSource is additionally set to 'manual' for any gateway
+    // title, so it cannot carry this meaning.
+    ...(hasStoredManualTitle ? { userTitle: storedTitle } : {}),
     titleError,
   }
 }
@@ -56,10 +60,11 @@ export function mergeTelegramMetadata(
   workstream: TelegramWorkstream | undefined,
 ): SessionMeta {
   if (!workstream) return session
-  const manualTitle =
-    session.titleSource === 'manual'
-      ? (session.label?.trim() || session.title?.trim() || undefined)
-      : undefined
+  // Only a name the user typed in MC outranks the real Telegram topic name.
+  // This used to read titleSource === 'manual', which is also set for any
+  // gateway-generated title — so the session's AI title always won and the
+  // chat header kept showing it while the workstream list showed the topic.
+  const manualTitle = session.userTitle?.trim() || undefined
   return {
     ...session,
     // A title explicitly saved in MC outranks transport-derived metadata.
