@@ -23,6 +23,7 @@ export type WidgetId =
   | 'skills_usage'
   | 'mix_rhythm'
   | 'openbrain'
+  | 'tasks'
 
 export type WidgetMeta = {
   id: WidgetId
@@ -124,6 +125,14 @@ export const WIDGET_CATALOG: ReadonlyArray<WidgetMeta> = [
     label: 'OpenBrain',
     description:
       'Durable memory telemetry — memory/decision counts, latest entries, and active projects.',
+    column: 'rail',
+    hideable: true,
+  },
+  {
+    id: 'tasks',
+    label: 'Tasks',
+    description:
+      'OpenEngine task board — live per-status counts. Links to the full board at /tasks.',
     column: 'rail',
     hideable: true,
   },

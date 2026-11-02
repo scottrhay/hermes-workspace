@@ -26,7 +26,7 @@ const DETAIL_QUERY_KEY = (id: string) => ['oe', 'work-item', id] as const
 // API helpers
 // ---------------------------------------------------------------------------
 
-async function fetchWorkItems(): Promise<OEWorkItem[]> {
+export async function fetchWorkItems(): Promise<OEWorkItem[]> {
   const res = await fetch('/api/openengine-work-items')
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as {

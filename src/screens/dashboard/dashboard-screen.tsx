@@ -35,6 +35,7 @@ import { OpsStrip } from './components/ops-strip'
 import { ProviderMixCard } from './components/provider-mix-card'
 import { SessionsIntelligenceCard } from './components/sessions-intelligence-card'
 import { SkillsUsageCard } from './components/skills-usage-card'
+import { TasksCard } from './components/tasks-card'
 import { TokenMixHourCard } from './components/token-mix-hour-card'
 import { TopModelsCard } from './components/top-models-card'
 import { VelocityCard } from './components/velocity-card'
@@ -1159,6 +1160,11 @@ export function DashboardScreen() {
             stretch the rail to match Sessions Intelligence height so
             we don't get the dangling gap Eric flagged in iter 007. */}
         <div className="flex min-h-full flex-col gap-3 lg:col-span-4">
+          {/* Tasks leads the rail — live OpenEngine status counts are
+              the first thing an operator scans for after the ops strip. */}
+          <WidgetShell id="tasks" layout={layout}>
+            <TasksCard />
+          </WidgetShell>
           <WidgetShell id="skills_usage" layout={layout}>
             <SkillsUsageCard
               usage={overview?.skillsUsage ?? null}
