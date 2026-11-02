@@ -10,7 +10,7 @@
 #   1. cp .env.example .env
 #   2. Add at least one provider key (whichever you use)
 #   3. docker compose up
-#   4. Open http://localhost:3000
+#   4. Open http://localhost:4200
 #
 # Images:
 #   This file pulls pre-built images by default — no local build required.
@@ -100,13 +100,32 @@ services:
     env_file:
       - .env
     environment:
+      # Force listen on all interfaces inside the container regardless of what
+      # .env's HOST says (that value is for the non-Docker `pnpm dev` flow).
+      # Without this, a local .env with HOST=127.0.0.1 makes the app bind to
+      # the container's own loopback, which Docker's port-forwarding can never
+      # reach — the published port looks fine in `docker ps` but nothing answers.
+      HOST: "0.0.0.0"
+      # Binding 0.0.0.0 makes the app itself demand HERMES_PASSWORD or this
+      # explicit opt-out (see #122). The host-side port publish below is still
+      # loopback-only (127.0.0.1:4200), so this doesn't add any real exposure —
+      # it just satisfies the app's own belt-and-suspenders check. Switch to a
+      # HERMES_PASSWORD instead if you ever publish this port beyond localhost.
+      HERMES_ALLOW_INSECURE_REMOTE: "1"
       HERMES_HOME: /home/workspace/.hermes
       HERMES_WORKSPACE_DIR: /workspace
-      # Internal Docker network URL (not localhost!)
-      HERMES_API_URL: http://hermes-agent:8642
+      # Internal Docker network URL (not localhost!). Keep both variable
+      # families because released Workspace images still read CLAUDE_* while
+      # newer builds also accept HERMES_*.
+      HERMES_API_URL: http://host.docker.internal:8642
+      HERMES_USE_RESPONSES: "1"
       HERMES_DASHBOARD_URL: http://hermes-agent:9119
-      # Must match API_SERVER_KEY on the hermes-agent side when that is set
-      HERMES_API_TOKEN: ${API_SERVER_KEY:-}
+      CLAUDE_API_URL: http://host.docker.internal:8642
+      CLAUDE_DASHBOARD_URL: http://hermes-agent:9119
+      # Must match API_SERVER_KEY on the hermes-agent side. The project .env
+      # may use the older HERMES_API_TOKEN name, so preserve that fallback.
+      HERMES_API_TOKEN: ${API_SERVER_KEY:-${HERMES_API_TOKEN:-}}
+      CLAUDE_API_TOKEN: ${API_SERVER_KEY:-${HERMES_API_TOKEN:-}}
       # Workspace session password. REQUIRED when HOST is non-loopback (the
       # default for Docker images, so the container binds 0.0.0.0:3000).
       # Pick a strong secret. See #122.
@@ -125,7 +144,8 @@ services:
       - hermes-agent-data:/home/workspace/.hermes
       - hermes-workspace-files:/workspace
     ports:
-      - '127.0.0.1:3000:3000'
+      # Host side: 4200 (MissionControl-suite convention). Container side stays 3000.
+      - '127.0.0.1:4200:3000'
 
 volumes:
   hermes-agent-data:
