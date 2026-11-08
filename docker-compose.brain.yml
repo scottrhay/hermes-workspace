@@ -1,6 +1,6 @@
 services:
   hermes-workspace:
-    image: aia-hermesworkspace:brain-v4-20261106
+    image: aia-hermesworkspace:brain-v5-20261107
     volumes:
       - type: bind
         source: /run/desktop/mnt/host/c/AIA-Code/Operations/MissionControl/AIA-HermesWorkspace/.runtime/aia-brain-metadata
