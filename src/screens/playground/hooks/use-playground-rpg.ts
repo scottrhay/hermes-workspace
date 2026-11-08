@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   PLAYGROUND_QUESTS,
   PLAYGROUND_SKILLS,
@@ -292,6 +292,26 @@ export function usePlaygroundRpg() {
     }, 3500)
   }, [])
 
+  // React may defer/replay updater callbacks. Announce only committed transitions,
+  // never mutate a local variable from inside a state updater.
+  const announcedQuests = useRef(state.completedQuests)
+  useEffect(() => {
+    const previous = announcedQuests.current
+    announcedQuests.current = state.completedQuests
+    for (const questId of state.completedQuests) {
+      if (previous.includes(questId)) continue
+      const quest = PLAYGROUND_QUESTS.find((entry) => entry.id === questId)
+      if (!quest) continue
+      pushToast('quest', 'Quest Complete', quest.title)
+      pushToast('xp', '+ XP', `+${quest.reward.xp} XP`)
+      for (const itemId of quest.reward.items ?? []) {
+        const item = itemById(itemId)
+        if (item) pushToast('item', '+ Item', item.name)
+      }
+      if (quest.reward.title) pushToast('title', 'Title Unlocked', quest.reward.title)
+    }
+  }, [state.completedQuests, pushToast])
+
   const setDisplayName = useCallback((displayName: string) => {
     setState((prev) => ({
       ...prev,
@@ -332,7 +352,6 @@ export function usePlaygroundRpg() {
   const markObjective = useCallback((questId: string, objectiveId: string) => {
     const quest = PLAYGROUND_QUESTS.find((entry) => entry.id === questId)
     if (!quest) return
-    let completedQuest: PlaygroundQuest | null = null
     setState((prev) => {
       const progress = prev.playerProfile.questProgress[questId] ?? {
         completed: false,
@@ -355,23 +374,9 @@ export function usePlaygroundRpg() {
       }
       const complete = quest.objectives.every((objective) => completedObjectives.includes(objective.id))
       if (!complete || prev.completedQuests.includes(quest.id)) return next
-      completedQuest = quest
       return completeQuestState(next, quest)
     })
-    if (completedQuest) {
-      pushToast('quest', 'Quest Complete', completedQuest.title)
-      pushToast('xp', '+ XP', `+${completedQuest.reward.xp} XP`)
-      if (completedQuest.reward.items?.length) {
-        for (const itemId of completedQuest.reward.items) {
-          const item = itemById(itemId)
-          if (item) pushToast('item', '+ Item', item.name)
-        }
-      }
-      if (completedQuest.reward.title) {
-        pushToast('title', 'Title Unlocked', completedQuest.reward.title)
-      }
-    }
-  }, [pushToast])
+  }, [])
 
   const grantItems = useCallback((items: PlaygroundItemId[]) => {
     if (!items?.length) return
@@ -451,16 +456,7 @@ export function usePlaygroundRpg() {
   const completeQuest = useCallback((quest: PlaygroundQuest) => {
     if (!quest) return
     setState((prev) => completeQuestState(prev, quest))
-    pushToast('quest', 'Quest Complete', quest.title)
-    pushToast('xp', '+ XP', `+${quest.reward.xp} XP`)
-    if (quest.reward.items?.length) {
-      for (const itemId of quest.reward.items) {
-        const item = itemById(itemId)
-        if (item) pushToast('item', '+ Item', item.name)
-      }
-    }
-    if (quest.reward.title) pushToast('title', 'Title Unlocked', quest.reward.title)
-  }, [pushToast])
+  }, [])
 
   const completeQuestById = useCallback((questId: string) => {
     const quest = PLAYGROUND_QUESTS.find((entry) => entry.id === questId)

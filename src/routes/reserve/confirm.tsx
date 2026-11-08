@@ -1,15 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { usePageTitle } from '@/hooks/use-page-title'
+import { validateConfirmationSearch } from './-confirmation-search'
 
 export const Route = createFileRoute('/reserve/confirm')({
   ssr: false,
+  validateSearch: validateConfirmationSearch,
   component: ReserveConfirmRoute,
 })
 
 function ReserveConfirmRoute() {
   usePageTitle('Confirm HermesWorld reservation')
-  const token = Route.useSearch({ strict: false }).token || ''
+  const token = Route.useSearch().token
   const [state, setState] = useState<{
     status: 'loading' | 'success' | 'error'
     message: string

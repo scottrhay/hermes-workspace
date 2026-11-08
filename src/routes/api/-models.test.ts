@@ -1,4 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// Model normalization must not initialize a real gateway or provider discovery.
+vi.mock('../../server/claude-api', () => ({
+  ensureGatewayProbed: vi.fn(), getGatewayCapabilities: vi.fn(),
+}))
+vi.mock('../../server/gateway-capabilities', () => ({ BEARER_TOKEN: '', CLAUDE_API: 'http://invalid.test' }))
+vi.mock('../../server/local-provider-discovery', () => ({
+  ensureDiscovery: vi.fn(), ensureProviderInConfig: vi.fn(), getDiscoveredModels: vi.fn(),
+}))
 import { mergeModelEntries } from './models'
 
 describe('mergeModelEntries', () => {

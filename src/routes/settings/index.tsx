@@ -357,9 +357,6 @@ function SettingsRoute() {
           {activeSection === 'agent' && (
             <ClaudeConfigSection activeView="agent" />
           )}
-          {activeSection === 'routing' && (
-            <ClaudeConfigSection activeView="routing" />
-          )}
           {activeSection === 'voice' && (
             <ClaudeConfigSection activeView="voice" />
           )}
@@ -2243,7 +2240,7 @@ function ClaudeConfigSection({
                       style={{ color: 'var(--theme-muted)' }}
                     >
                       {customApiKeyConfigured
-                        ? customProviderCatalogEntry.maskedKeys['CUSTOM_API_KEY'] || 'Set'
+                        ? customProviderCatalogEntry?.maskedKeys['CUSTOM_API_KEY'] || 'Set'
                         : 'Not set'}
                     </span>
                     <Button

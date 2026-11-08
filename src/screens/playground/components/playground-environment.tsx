@@ -5,6 +5,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import type { PlaygroundWorldId } from '../lib/playground-rpg'
 import { useHermesWorldSettings } from './hermesworld-settings'
 
 // Deterministic pseudo-random based on seed so layout is stable per render
@@ -595,12 +596,12 @@ export function ScatteredScenery({
   worldId,
   seed = 1,
 }: {
-  worldId: 'agora' | 'forge' | 'grove' | 'oracle' | 'arena'
+  worldId: PlaygroundWorldId
   seed?: number
 }) {
   const items = useMemo(() => {
     const r = rng(seed * 100 + worldId.length)
-    const out: { type: string; pos: [number, number, number]; color?: string; scale?: number }[] = []
+    const out: { type: string; pos: [number, number, number]; color?: string; scale?: number; glow?: string }[] = []
 
     function maybeOnEdge(): [number, number, number] {
       // Place on ring 14-22 from center

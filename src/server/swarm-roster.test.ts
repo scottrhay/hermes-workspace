@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { SwarmRosterSchema, SwarmRosterUpsertSchema, isSwarmWorkerId } from './swarm-roster'
+import { SwarmRosterSchema, SwarmRosterUpsertSchema, isSwarmWorkerId, fallbackRoster } from './swarm-roster'
 
 describe('swarm roster semantic workers', () => {
+  it('supplies every schema default for discovered fallback workers', () => {
+    const roster = fallbackRoster(['swarm5', 'builder'])
+    expect(roster).toEqual(SwarmRosterSchema.parse(roster))
+    expect(roster.workers[0]).toMatchObject({ modes: [], tools: [], plugins: [], pluginToolsets: [], mcpServers: [], greenlightRequiredFor: [], role: 'Builder' })
+  })
   it('accepts both legacy swarm ids and semantic profile ids for upsert', () => {
     const baseWorker = {
       name: 'Builder',

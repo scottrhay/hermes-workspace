@@ -138,7 +138,7 @@ export function Swarm2OrchestratorCard({
     id: agent.workerId,
     name: agent.workerName,
     modelId: agent.role,
-    status: agent.state === 'blocked' ? 'error' : agent.state === 'ready' ? 'done' : 'active',
+    status: agent.state === 'blocked' ? 'error' : agent.state === 'ready' ? 'ready' : 'active',
     lastLine: agent.task,
     lastAt: Date.now(),
     taskCount: agent.state === 'ready' ? 0 : 1,
@@ -348,6 +348,7 @@ export function Swarm2OrchestratorCard({
               <div className="h-[360px] overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-card)]">
                 <OfficeView
                   agentRows={officeAgents}
+                  processType="parallel"
                   missionRunning={activeAgents.some((agent) => agent.state === 'working' || agent.state === 'reviewing')}
                   onViewOutput={() => undefined}
                   containerHeight={360}

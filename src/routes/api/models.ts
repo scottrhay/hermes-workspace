@@ -37,7 +37,7 @@ function readString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function normalizeModel(entry: unknown): ModelEntry | null {
+function normalizeModel(entry: unknown): (ModelEntry & { id: string }) | null {
   if (typeof entry === 'string') {
     const id = entry.trim()
     if (!id) return null
@@ -66,7 +66,7 @@ function normalizeModel(entry: unknown): ModelEntry | null {
   }
 }
 
-export function mergeModelEntries(...sources: Array<Array<ModelEntry>>): Array<ModelEntry> {
+export function mergeModelEntries(...sources: Array<Array<unknown>>): Array<ModelEntry> {
   const merged: Array<ModelEntry> = []
   const seen = new Set<string>()
 
@@ -103,7 +103,7 @@ function readClaudeModelsJson(): Array<ModelEntry> {
           provider: readString(record.provider) || 'unknown',
         }
       })
-      .filter((entry): entry is ModelEntry => entry !== null)
+      .filter((entry) => entry !== null)
   } catch {
     return []
   }
@@ -288,7 +288,7 @@ async function fetchConfiguredLiveModels(): Promise<Array<ModelEntry>> {
             : []
         models = rawModels
           .map(normalizeModel)
-          .filter((entry): entry is ModelEntry => entry !== null)
+          .filter((entry) => entry !== null)
           .map((entry) => ({
             ...entry,
             provider: readString(entry.provider) || endpoint.provider,
@@ -402,7 +402,7 @@ async function fetchClaudeModels(): Promise<Array<ModelEntry>> {
       : []
   return rawModels
     .map(normalizeModel)
-    .filter((e): e is ModelEntry => e !== null)
+    .filter((e) => e !== null)
 }
 
 export const Route = createFileRoute('/api/models')({

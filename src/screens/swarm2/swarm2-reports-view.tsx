@@ -806,10 +806,11 @@ export function Swarm2ReportsView({
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {workerCards.length ? workerCards.map((card) => {
             const expanded = expandedId === `worker:${card.workerId}`
-            const latestInboxItem = {
+            const latestInboxItem: Swarm2InboxItem = {
               ...card.latest,
-              lane: (card.latest.state === 'blocked' ? 'blocked' : card.latest.state === 'ready' ? 'ready' : 'needs_review') as Swarm2InboxLaneId,
+              lane: (card.latest.state === 'blocked' ? 'blocked' : card.latest.state === 'ready' ? 'ready' : 'needs_review'),
             }
+            const prUrl = extractPullRequestUrl(card.latest)
             return (
               <article key={card.workerId} className="rounded-[1.4rem] border border-[var(--theme-border)] border-l-4 border-l-[var(--theme-accent)] bg-[var(--theme-bg)] p-4 shadow-[0_16px_40px_color-mix(in_srgb,var(--theme-shadow)_10%,transparent)]">
                 <div className="flex items-start justify-between gap-3">
@@ -817,7 +818,7 @@ export function Swarm2ReportsView({
                     <div className="relative flex size-12 shrink-0 items-center justify-center">
                       <AgentProgress
                         value={card.state === 'blocked' ? 30 : card.state === 'needs_review' ? 74 : card.state === 'ready' ? 100 : 58}
-                        status={card.state === 'blocked' ? 'failed' : card.state === 'ready' ? 'done' : card.state === 'needs_review' ? 'thinking' : 'running'}
+                        status={card.state === 'blocked' ? 'failed' : card.state === 'ready' ? 'complete' : card.state === 'needs_review' ? 'thinking' : 'running'}
                         size={48}
                         strokeWidth={2.5}
                         className={card.state === 'blocked' ? 'text-red-500' : card.state === 'needs_review' ? 'text-amber-500' : card.state === 'ready' ? 'text-emerald-500' : 'text-sky-500'}
@@ -844,9 +845,9 @@ export function Swarm2ReportsView({
                     >
                       {expanded ? 'Hide reports' : `Open reports (${card.rows.length})`}
                     </button>
-                    {card.prUrl ? (
+                    {prUrl ? (
                       <a
-                        href={card.prUrl}
+                        href={prUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center rounded-lg border border-[var(--theme-border)] bg-[var(--theme-card)] px-2.5 py-1.5 text-[11px] text-[var(--theme-text)] hover:bg-[var(--theme-card2)]"
@@ -857,7 +858,7 @@ export function Swarm2ReportsView({
                     {(card.state === 'needs_review' || card.state === 'blocked' || card.state === 'ready') ? (
                       <button
                         type="button"
-                        onClick={() => onRouteToReviewer?.(card)}
+                        onClick={() => onRouteToReviewer?.(latestInboxItem)}
                         className="rounded-lg border border-[var(--theme-border)] bg-[var(--theme-card)] px-2.5 py-1.5 text-[11px] text-[var(--theme-text)] hover:bg-[var(--theme-card2)]"
                       >
                         Steer

@@ -408,7 +408,7 @@ function StatusLine({
       <span className="opacity-80">
         {getAssistantDetailLabel({
           active: hasConfirmedActivity,
-          heartbeat: heartbeatActivity,
+          heartbeat: heartbeatActivity ?? '',
         })}
       </span>
       <span aria-hidden="true" className="opacity-40">·</span>

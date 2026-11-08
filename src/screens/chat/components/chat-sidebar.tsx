@@ -140,7 +140,6 @@ type ChatSidebarProps = {
 type NavItemDef = {
   kind: 'link' | 'button'
   to?: string
-  search?: Record<string, unknown>
   hash?: string
   icon: unknown
   label: string
@@ -253,7 +252,6 @@ function NavItem({
               render={
                 <Link
                   to={item.to}
-                  search={item.search}
                   hash={item.hash}
                   onClick={handleSelect}
                   className={cls}
@@ -271,7 +269,6 @@ function NavItem({
     return (
       <Link
         to={item.to}
-        search={item.search}
         hash={item.hash}
         onClick={handleSelect}
         className={cls}

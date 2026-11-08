@@ -19,7 +19,7 @@ WORKDIR /app
 # NOTE: pnpm-workspace.yaml carries the allowBuilds approvals (electron/esbuild/…);
 # it must be present or pnpm 10+/11 fatally errors on ignored build scripts.
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* .npmrc* ./
-RUN pnpm install --frozen-lockfile
+RUN corepack prepare pnpm@11.9.0 --activate && pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy sources and build
 COPY . .
@@ -48,6 +48,8 @@ COPY --from=build --chown=workspace:workspace /app/dist ./dist
 COPY --from=build --chown=workspace:workspace /app/node_modules ./node_modules
 COPY --from=build --chown=workspace:workspace /app/package.json ./package.json
 COPY --from=build --chown=workspace:workspace /app/server-entry.js ./server-entry.js
+COPY --from=build --chown=workspace:workspace /app/server-hermes-auth.js ./server-hermes-auth.js
+COPY --from=build --chown=workspace:workspace /app/server-remote-access.js ./server-remote-access.js
 COPY --from=build --chown=workspace:workspace /app/skills ./skills
 COPY --chown=workspace:workspace docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 

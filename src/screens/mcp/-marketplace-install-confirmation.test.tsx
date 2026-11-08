@@ -11,6 +11,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+
 // Mock UI primitives before importing the component so vi.mock hoisting works.
 // The factories use the same React import as the test (ESM) to avoid dual-instance.
 vi.mock('@/components/ui/dialog', () => ({
@@ -325,10 +327,10 @@ describe('InstallConfirmationDialog — 2-click commit', () => {
   })
 
   it('fetch is aborted when dialog is closed mid-install', async () => {
-    let capturedSignal: AbortSignal | null = null
+    const captured: { signal: AbortSignal | null } = { signal: null }
     // Fetch that never resolves — simulates in-flight request
     global.fetch = vi.fn().mockImplementation((_url: string, opts: RequestInit) => {
-      capturedSignal = opts.signal ?? null
+      captured.signal = opts.signal ?? null
       return new Promise(() => { /* never resolves */ })
     }) as unknown as typeof fetch
 
@@ -343,8 +345,8 @@ describe('InstallConfirmationDialog — 2-click commit', () => {
     await React.act(async () => { btn.click() })
 
     // Signal should exist and not yet aborted
-    expect(capturedSignal).not.toBeNull()
-    expect((capturedSignal as AbortSignal).aborted).toBe(false)
+    expect(captured.signal).not.toBeNull()
+    expect(captured.signal?.aborted).toBe(false)
 
     // Now close the dialog while installing — Cancel button is disabled, so
     // we test via onOpenChange: simulate the dialog requesting close
@@ -354,7 +356,7 @@ describe('InstallConfirmationDialog — 2-click commit', () => {
     // calls ac.abort() when installing. We trigger this by re-rendering with
     // entry=null which changes open to false, triggering onOpenChange(false).
     // Since we can't call onOpenChange directly, verify the AbortSignal is wired.
-    expect(capturedSignal).not.toBeNull()
+    expect(captured.signal).not.toBeNull()
     // The signal is passed to fetch — abort is triggered by handleOpenChange
     // which is tested structurally via the component code review.
     // Functional proof: re-render with entry=null to trigger open→false.

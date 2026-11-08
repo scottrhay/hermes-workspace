@@ -72,6 +72,15 @@ const gatesRow = {
   title: 'Existing',
 }
 
+async function callPost(context: { request: Request }): Promise<Response> {
+  const handlers = Route.options.server?.handlers
+  const handler = typeof handlers === 'object' ? handlers.POST : undefined
+  if (!handler) throw new Error('No POST handler')
+  const response = await handler(context as Parameters<typeof handler>[0])
+  if (!(response instanceof Response)) throw new Error('POST did not return a Response')
+  return response
+}
+
 describe('POST /api/telegram-topic-create', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -87,8 +96,7 @@ describe('POST /api/telegram-topic-create', () => {
   })
 
   it('creates and binds Telegram topic and Hermes session atomically', async () => {
-    const handler = Route.options.server?.handlers?.POST as any
-    const response = await handler({
+    const response = await callPost({
       request: postRequest({
         chatId: '-1004374880092',
         groupName: 'Gates',
@@ -135,8 +143,7 @@ describe('POST /api/telegram-topic-create', () => {
   it('rolls back the Telegram topic when Hermes session creation fails', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     createSession.mockRejectedValue(new Error('Hermes unavailable'))
-    const handler = Route.options.server?.handlers?.POST as any
-    const response = await handler({
+    const response = await callPost({
       request: postRequest({
         chatId: '-1004374880092',
         groupName: 'Gates',
@@ -158,8 +165,7 @@ describe('POST /api/telegram-topic-create', () => {
   })
 
   it('rejects chats that are not already authorized workstream groups', async () => {
-    const handler = Route.options.server?.handlers?.POST as any
-    const response = await handler({
+    const response = await callPost({
       request: postRequest({
         chatId: '-1000000000000',
         groupName: 'Unknown',
