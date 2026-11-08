@@ -1,0 +1,10 @@
+services:
+  hermes-workspace:
+    image: aia-hermesworkspace:brain-v4-20261106
+    volumes:
+      - type: bind
+        source: /run/desktop/mnt/host/c/AIA-Code/Operations/MissionControl/AIA-HermesWorkspace/.runtime/aia-brain-metadata
+        target: /run/aia-brain
+        read_only: true
+        bind:
+          create_host_path: false

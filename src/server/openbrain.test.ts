@@ -1,162 +1,142 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Pool } from 'pg'
-import {
-  isOpenBrainConfigured,
-  readOpenBrainStats,
-  resetOpenBrainPool,
-} from './openbrain'
+import fs from 'node:fs/promises'
+import net from 'node:net'
+import http from 'node:http'
+import https from 'node:https'
+import { constants } from 'node:fs'
+import { syncBuiltinESMExports } from 'node:module'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { readOpenBrainStats } from './openbrain'
 
-const query = vi.fn()
-
-vi.mock('pg', () => ({
-  Pool: vi.fn(() => ({
-    query,
-    on: vi.fn(),
-    end: vi.fn().mockResolvedValue(undefined),
-  })),
-}))
-
-/**
- * Classify a query. Order matters: the counts query reads every table via
- * scalar subqueries, so it contains "FROM memory" and "FROM projects" too and
- * must be matched first by something unique to it.
- */
-function classify(sql: string): 'counts' | 'memory' | 'projects' {
-  if (sql.includes('AS memory_entries')) return 'counts'
-  if (sql.includes('ORDER BY date DESC')) return 'memory'
-  return 'projects'
-}
-
-function respondBySql(handlers: {
-  counts?: unknown
-  memory?: Array<Record<string, unknown>>
-  projects?: Array<Record<string, unknown>>
-}) {
-  query.mockImplementation((sql: string) => {
-    switch (classify(sql)) {
-      case 'memory':
-        return Promise.resolve({ rows: handlers.memory ?? [] })
-      case 'projects':
-        return Promise.resolve({ rows: handlers.projects ?? [] })
-      default:
-        return Promise.resolve({ rows: [handlers.counts ?? {}] })
-    }
+const realOpen = fs.open.bind(fs)
+const NOW = Date.parse('2026-11-06T15:00:00Z')
+const snapshot = () => ({
+  schemaVersion: 2, generatedAt: new Date(NOW).toISOString(), status: 'current',
+  scope: 'aiacopilot:operations', coverage: 'designated-reader', fallback: false,
+  counts: { readableFiles: 257, anchorSources: 5, verifiedAnchors: 5, admittedOperationsNotes: 1 },
+  admissionRevision: 1,
+})
+let networkCalls: number
+let dir: string
+let file: string
+const save = async (value: unknown) => fs.writeFile(file, JSON.stringify(value))
+beforeEach(async () => {
+  networkCalls = 0
+  const denyNetwork = () => { networkCalls++; throw new Error('Network forbidden') }
+  vi.spyOn(net, 'connect').mockImplementation(denyNetwork)
+  vi.spyOn(net, 'createConnection').mockImplementation(denyNetwork)
+  vi.spyOn(http, 'request').mockImplementation(denyNetwork)
+  vi.spyOn(https, 'request').mockImplementation(denyNetwork)
+  vi.stubGlobal('fetch', denyNetwork)
+  dir = await fs.mkdtemp(join(tmpdir(), 'brain-metadata-'))
+  file = join(dir, 'metadata.json')
+  await save(snapshot())
+  vi.spyOn(Date, 'now').mockReturnValue(NOW)
+  // Redirect only the fixed path. Preserve actual OS open/read/stat/close and no-follow.
+  vi.spyOn(fs, 'open').mockImplementation(async (path, flags) => {
+    expect(path).toBe('/run/aia-brain/metadata.json')
+    expect(flags).toBe(constants.O_RDONLY | constants.O_NOFOLLOW)
+    return realOpen(file, flags)
   })
-}
-
-describe('openbrain telemetry reader', () => {
-  beforeEach(() => {
-    process.env.OPENBRAIN_DB_URL = 'postgres://ro:pw@127.0.0.1:5433/openbrain'
+  syncBuiltinESMExports()
+  vi.stubEnv('OPENBRAIN_DB_URL', 'postgresql://never-connect.invalid/rejected')
+})
+afterEach(async () => {
+  expect(networkCalls).toBe(0)
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  syncBuiltinESMExports()
+  vi.unstubAllEnvs()
+  await fs.rm(dir, { recursive: true, force: true })
+})
+describe('designated-reader metadata snapshot', () => {
+  it('reads exact metadata without legacy configuration', async () => {
+    expect(await readOpenBrainStats()).toEqual(snapshot())
+    vi.stubEnv('OPENBRAIN_DB_URL', '')
+    expect(await readOpenBrainStats()).toEqual(snapshot())
   })
-
-  afterEach(async () => {
-    await resetOpenBrainPool()
-    delete process.env.OPENBRAIN_DB_URL
-    query.mockReset()
-    vi.mocked(Pool).mockClear()
+  it.each([300000, 300001])('marks freshness boundary %i', async (age) => {
+    await save({ ...snapshot(), generatedAt: new Date(NOW - age).toISOString() })
+    expect((await readOpenBrainStats()).status).toBe(age > 300000 ? 'stale' : 'current')
   })
-
-  it('treats a missing OPENBRAIN_DB_URL as unconfigured', () => {
-    delete process.env.OPENBRAIN_DB_URL
-    expect(isOpenBrainConfigured()).toBe(false)
-
-    process.env.OPENBRAIN_DB_URL = '   '
-    expect(isOpenBrainConfigured()).toBe(false)
-
-    process.env.OPENBRAIN_DB_URL = 'postgres://ro:pw@127.0.0.1:5433/openbrain'
-    expect(isOpenBrainConfigured()).toBe(true)
+  it('accepts Python microseconds and UTC offset', async () => {
+    await save({ ...snapshot(), generatedAt: '2026-11-06T15:00:00.000000+00:00' })
+    expect((await readOpenBrainStats()).status).toBe('current')
   })
-
-  it('coerces bigint counts, which pg returns as strings', async () => {
-    respondBySql({
-      counts: {
-        context_items: '42',
-        decisions: '173',
-        projects: '8',
-        clients: '9',
-        memory_entries: '1295',
-        routing: '4',
-      },
-    })
-
-    const stats = await readOpenBrainStats()
-
-    expect(stats.counts).toEqual({
-      contextItems: 42,
-      decisions: 173,
-      projects: 8,
-      clients: 9,
-      memoryEntries: 1295,
-      routing: 4,
-    })
+  it('strips unknown fields at every projected level', async () => {
+    const sentinel = 'private-source-opaque-13e71'
+    await save({ ...snapshot(), sourceContent: sentinel, counts: { ...snapshot().counts, path: sentinel } })
+    expect(JSON.stringify(await readOpenBrainStats())).not.toContain(sentinel)
+    expect(await readOpenBrainStats()).toEqual(snapshot())
   })
-
-  it('reads the OpenBrain columns this panel depends on', async () => {
-    // Pins the schema contract: the workspace queries OpenBrain's tables
-    // directly, so a rename upstream should fail here loudly rather than
-    // silently blanking the card.
-    const createdAt = new Date('2026-08-05T22:56:46Z')
-    respondBySql({
-      memory: [
-        {
-          id: 7,
-          date: '2026-08-05',
-          scope: 'aiacopilot',
-          category: 'decision',
-          content: 'Use a read-only role instead of a second service.',
-          importance: 8,
-          created_at: createdAt,
-        },
-      ],
-      projects: [
-        {
-          id: 3,
-          name: 'AIA-WebUI Mission Control',
-          business: 'aiacopilot',
-          status: 'active',
-          owner: 'Scott',
-          priority: 'P1',
-        },
-      ],
-    })
-
-    const stats = await readOpenBrainStats()
-
-    expect(stats.recentMemory[0]).toEqual({
-      id: 7,
-      date: '2026-08-05',
-      scope: 'aiacopilot',
-      category: 'decision',
-      content: 'Use a read-only role instead of a second service.',
-      importance: 8,
-      createdAt: createdAt.toISOString(),
-    })
-    expect(stats.activeProjects[0]).toEqual({
-      id: 3,
-      name: 'AIA-WebUI Mission Control',
-      business: 'aiacopilot',
-      status: 'active',
-      owner: 'Scott',
-      priority: 'P1',
-    })
+  it('removes counts/revision when unavailable', async () => {
+    await save({ ...snapshot(), status: 'unavailable' })
+    const result = await readOpenBrainStats()
+    expect(result.status).toBe('unavailable')
+    expect(result).not.toHaveProperty('counts')
+    expect(result).not.toHaveProperty('admissionRevision')
   })
-
-  it('excludes finished work from active projects and bounds recent memory', async () => {
-    respondBySql({})
-    await readOpenBrainStats()
-
-    const sqls = query.mock.calls.map(([sql]) => String(sql))
-    const projectsSql = sqls.find((sql) => classify(sql) === 'projects')
-    const memorySql = sqls.find((sql) => classify(sql) === 'memory')
-
-    expect(projectsSql).toMatch(/NOT IN \('complete', 'archived'\)/)
-    expect(memorySql).toMatch(/LIMIT \$2/)
-    // Content is previewed, not returned whole — this feeds a card.
-    expect(memorySql).toMatch(/left\(content, \$1\)/)
+  it.each(['schemaVersion', 'generatedAt', 'status', 'scope', 'coverage', 'fallback', 'counts', 'admissionRevision'])('rejects missing %s', async (key) => {
+    const value: Record<string, unknown> = snapshot()
+    delete value[key]
+    await save(value)
+    await expect(readOpenBrainStats()).rejects.toThrow()
   })
-
-  it('surfaces connection failures to the caller', async () => {
-    query.mockRejectedValue(new Error('ECONNREFUSED 127.0.0.1:5433'))
-    await expect(readOpenBrainStats()).rejects.toThrow('ECONNREFUSED')
+  it.each([
+    { schemaVersion: '2' }, { schemaVersion: 1 }, { coverage: 'restricted-approved-sources' },
+    { scope: 'client:private' }, { coverage: 'all' },
+    { fallback: true }, { fallback: 0 }, { status: 'stale' },
+    { generatedAt: 'broken' }, { generatedAt: ['2026-11-06T15:00:00.000Z'] },
+    { generatedAt: 'Fri, 06 Nov 2026 15:00:00 GMT' },
+    { generatedAt: '2026-11-06T15:01:00.001Z' },
+    { admissionRevision: -1 }, { admissionRevision: 0.5 }, { admissionRevision: '1' },
+  ])('rejects invalid schema %j', async (change) => {
+    await save({ ...snapshot(), ...change })
+    await expect(readOpenBrainStats()).rejects.toThrow()
+  })
+  it.each([
+    { anchorSources: 4 }, { verifiedAnchors: 4 }, { anchorSources: '5' },
+    { readableFiles: 0 }, { readableFiles: 100001 }, { readableFiles: 1.5 }, { readableFiles: '257' },
+    { admittedOperationsNotes: -1 }, { admittedOperationsNotes: 0.5 },
+    { admittedOperationsNotes: '1' }, { admittedOperationsNotes: 101 },
+  ])('rejects invalid counts %j', async (change) => {
+    await save({ ...snapshot(), counts: { ...snapshot().counts, ...change } })
+    await expect(readOpenBrainStats()).rejects.toThrow()
+  })
+  it.each(['null', '[]', '{', '', ' '.repeat(4097)])('rejects invalid/oversized file (%#)', async (value) => {
+    await fs.writeFile(file, value)
+    await expect(readOpenBrainStats()).rejects.toThrow()
+  })
+  it('accepts exactly 4096 bytes', async () => {
+    await fs.writeFile(file, JSON.stringify(snapshot()).padEnd(4096))
+    expect(await readOpenBrainStats()).toEqual(snapshot())
+  })
+  it('rejects missing file', async () => {
+    await fs.unlink(file)
+    await expect(readOpenBrainStats()).rejects.toThrow()
+  })
+  it('rejects real final-component symlink', async () => {
+    const target = join(dir, 'target.json')
+    await fs.rename(file, target)
+    await fs.symlink(target, file)
+    await expect(readOpenBrainStats()).rejects.toMatchObject({ code: 'ELOOP' })
+  })
+  it('rejects directory and closes handle', async () => {
+    await fs.unlink(file)
+    await fs.mkdir(file)
+    const handle = await realOpen(file, constants.O_RDONLY)
+    const close = vi.spyOn(handle, 'close')
+    vi.mocked(fs.open).mockResolvedValueOnce(handle)
+    await expect(readOpenBrainStats()).rejects.toThrow('Invalid snapshot')
+    expect(close).toHaveBeenCalledOnce()
+  })
+  it('closes handle on read failure', async () => {
+    const handle = await realOpen(file, constants.O_RDONLY)
+    const close = vi.spyOn(handle, 'close')
+    vi.spyOn(handle, 'read').mockRejectedValueOnce(new Error('read-failure'))
+    vi.mocked(fs.open).mockResolvedValueOnce(handle)
+    await expect(readOpenBrainStats()).rejects.toThrow('read-failure')
+    expect(close).toHaveBeenCalledOnce()
   })
 })
